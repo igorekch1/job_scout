@@ -33,12 +33,15 @@ sources:
     enabled: true
     boards: [example-company]
 
-  # The sources below are planned and not implemented yet.
-  lever: { enabled: false, companies: [] }
-  himalayas: { enabled: false, queries: [] }
-  remotive: { enabled: false, category: software-dev, search: [] }
-  remoteok: { enabled: false, tags: [] }
-  jobicy: { enabled: false, tags: [] }
+  lever:
+    enabled: false
+    companies: [] # site names from jobs.lever.co/<site>
+    eu_companies: [] # site names from jobs.eu.lever.co/<site>
+  himalayas: { enabled: false, queries: [react, frontend] } # polled at most hourly
+  remotive: { enabled: false, category: software-dev, search: [react] } # at most every 6 h
+  remoteok: { enabled: false, tags: [react, javascript] } # at most hourly
+  jobicy: { enabled: false, tags: [react, frontend], geo: europe } # at most hourly
+  # Planned, not implemented yet:
   telegram_channels: # uses YOUR account via TG_API_ID / TG_API_HASH / TG_SESSION
     enabled: false
     channels: []
