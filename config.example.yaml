@@ -89,15 +89,20 @@ filters:
     drop_patterns: ['on[- ]?call', 'night shifts?']
     flag_patterns: ['overlap']
 
-# ------------------------------------------------------------------ scoring (planned)
+# ------------------------------------------------------------------ scoring
+# Optional: Claude scores each kept job against profile.md before it is sent.
+# Needs ANTHROPIC_API_KEY in .env.
 scoring:
   enabled: false
-  model: claude-sonnet-5-5
-  daily_budget_usd: 1
+  model: claude-opus-5-5
+  effort: low # low | medium | high
+  daily_budget_usd: 1 # jobs are sent unscored once this is spent
   priorities:
     - { label: P1, definition: 'Best fit: primary stack, fully remote' }
     - { label: P2, definition: 'Good fit: adjacent stack or mixed role' }
     - { label: P3, definition: 'Acceptable: worth a look' }
+  industries: [] # optional labels, e.g. [FinTech, Healthcare, Other]
+  # min_fit_score: 40 # do not send jobs scored below this
 
 # ------------------------------------------------------------------ telegram
 telegram:

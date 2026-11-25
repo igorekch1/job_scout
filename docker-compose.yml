@@ -1,5 +1,5 @@
 # Local and self-hosted setup: Postgres, a one-shot migration, the worker and the bot.
-#   cp .env.example .env && cp config.example.yaml config.yaml   # then edit both
+#   cp .env.example .env && cp config.example.yaml config.yaml && cp profile.example.md profile.md
 #   docker compose up -d --build
 
 x-app: &app
@@ -11,6 +11,8 @@ x-app: &app
     CONFIG_PATH: /config/config.yaml
   volumes:
     - ./config.yaml:/config/config.yaml:ro
+    # create it first (cp profile.example.md profile.md), or Docker makes a directory here
+    - ./profile.md:/config/profile.md:ro
   depends_on:
     migrate:
       condition: service_completed_successfully
