@@ -136,8 +136,13 @@ tracker:
   #   defaults: { status: 'To Apply' }
   #   auto_number: { property: '#' }    # optional running number
 
+# ------------------------------------------------------------------ application drafts
+# Optional "Prepare application" button. Needs ANTHROPIC_API_KEY and profile.md.
 application:
+  enabled: false
+  model: claude-opus-5-5
+  effort: medium
   profile_file: profile.md
   language: en
   cover_letter_max_words: 180
-  style_rules: []
+  style_rules: [] # e.g. ['Short sentences', 'No buzzwords']
