@@ -42,6 +42,8 @@ export const jobs = pgTable(
     verdict: text('verdict').notNull(),
     dropReasons: jsonb('drop_reasons').$type<string[]>().notNull().default([]),
     flags: jsonb('flags').$type<string[]>().notNull().default([]),
+    /** Specifics per reason or flag code, e.g. the keyword that matched. */
+    filterDetails: jsonb('filter_details').$type<Record<string, string>>().notNull().default({}),
     /** What the user did with it: new | tracked | rejected. */
     state: text('state').notNull().default('new'),
     /** Stored during a source's first run without notifying anyone. */

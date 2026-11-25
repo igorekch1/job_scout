@@ -44,7 +44,20 @@ const PERIOD_ANYWHERE: readonly (readonly [SalaryPeriod, RegExp])[] = [
 ];
 
 const CONTEXT =
-  /salary|compensation|\bpay\b|\bpaid\b|\brate\b|\bbase\b|\bOTE\b|remuneration|wage|budget|\bearn/i;
+  /salary|salaries|compensation|\bpay\b|\bpaid\b|\brate\b|\bbase\b|\bOTE\b|remuneration|wage|\bearn/i;
+/** Money that is not pay: perks, budgets the role manages, company figures. */
+const NOT_PAY_NEARBY =
+  /stipend|allowance|budget|benefit|bonus|reimburs|perk|equipment|lifestyle|wellness|learning|home[- ]office|co-?working|\bgym\b|lunch|\bmeal|internet|subscription|voucher|\bcredits?\b|\bspend|revenue|funding|\bARR\b|\bGMV\b|turnover|\bgrant\b|prize|referral|sign[- ]on|relocation|insurance|deductible/i;
+
+/** Amounts outside these bounds are not somebody's pay for that period. */
+const PLAUSIBLE: Readonly<Record<SalaryPeriod, readonly [number, number]>> = {
+  hour: [5, 500],
+  day: [30, 5_000],
+  week: [100, 20_000],
+  month: [200, 100_000],
+  year: [5_000, 2_000_000],
+};
+
 const NOT_PAY_AFTER =
   /^\s?(?:m\b|mm\b|mn\b|million|billion|bn\b|b\b|%|x\b|\+?\s*(?:users|customers|employees|people|in (?:funding|revenue|arr)))/i;
 const NOT_PAY_BEFORE =
@@ -71,8 +84,8 @@ function toNumber(token: string, kilo: boolean): number {
 
 function inferPeriod(amount: number): SalaryPeriod | null {
   if (amount >= 20_000) return 'year';
-  if (amount >= 1_000) return 'month';
-  if (amount > 0 && amount < 300) return 'hour';
+  if (amount >= 200) return 'month';
+  if (amount > 0) return 'hour';
   return null;
 }
 
@@ -119,7 +132,10 @@ export function parseSalary(
     if (!Number.isFinite(first) || first < 5) continue;
     if (second !== null && (!Number.isFinite(second) || second < first)) continue;
 
-    let period = PERIODS.find(([, regex]) => regex.test(after))?.[0] ?? null;
+    const direct = PERIODS.map(([name, regex]) => ({ name, match: regex.exec(after) })).find(
+      (entry) => entry.match,
+    );
+    let period: SalaryPeriod | null = direct?.name ?? null;
     const explicitPeriod = period !== null;
     if (!period) {
       const nearby = `${before.slice(-40)} ${after}`;
@@ -127,6 +143,9 @@ export function parseSalary(
     }
     const stated = period !== null;
     period ??= inferPeriod(second ?? first);
+
+    const top = second ?? first;
+    if (period && (top < PLAUSIBLE[period][0] || first > PLAUSIBLE[period][1])) continue;
 
     let min: number | null = first;
     let max: number | null = second ?? first;
@@ -136,8 +155,12 @@ export function parseSalary(
     }
 
     const hasContext = CONTEXT.test(before) || CONTEXT.test(after.slice(0, 20));
-    if (options.requireContext && !hasContext && !explicitPeriod && !(isRange && first >= 1000)) {
-      continue;
+    if (options.requireContext) {
+      const looksLikePay = hasContext || explicitPeriod || (isRange && first >= 1000);
+      const besidePerk =
+        !CONTEXT.test(before) &&
+        (NOT_PAY_NEARBY.test(before.slice(-40)) || NOT_PAY_NEARBY.test(after.slice(0, 30)));
+      if (!looksLikePay || besidePerk) continue;
     }
 
     candidates.push({
@@ -147,7 +170,10 @@ export function parseSalary(
         currency,
         period,
         periodInferred: !stated && period !== null,
-        text: whole.trim() + (explicitPeriod ? (after.match(/^\s*\S+(?:\s\S+)?/)?.[0] ?? '') : ''),
+        text: text
+          .slice(start, start + whole.length + (direct?.match?.[0].length ?? 0))
+          .replace(/\s+/g, ' ')
+          .trim(),
       },
       score: (isRange ? 2 : 0) + (stated ? 2 : 0) + (hasContext ? 1 : 0),
     });

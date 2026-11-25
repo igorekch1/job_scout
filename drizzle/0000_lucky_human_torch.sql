@@ -64,6 +64,7 @@ CREATE TABLE "jobs" (
 	"verdict" text NOT NULL,
 	"drop_reasons" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"flags" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"filter_details" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"state" text DEFAULT 'new' NOT NULL,
 	"silent" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,

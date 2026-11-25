@@ -1,5 +1,5 @@
 {
-  "id": "6499496b-3c87-4818-a3fe-7524cd41a3a1",
+  "id": "99f9fec4-b9ac-4236-9260-1b11184f6cd6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -536,6 +536,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'[]'::jsonb"
+        },
+        "filter_details": {
+          "name": "filter_details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
         },
         "state": {
           "name": "state",

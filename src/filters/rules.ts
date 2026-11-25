@@ -8,7 +8,7 @@ import {
   zoneOffsetMinutes,
 } from '../normalize/hours.js';
 import type { Job, SalaryPeriod } from '../normalize/job.js';
-import { countKeyword, findKeyword, hasKeyword } from '../util/text.js';
+import { countKeyword, findKeyword, hasKeyword, keywordRegex } from '../util/text.js';
 import { drop, flag, type Outcome } from './types.js';
 
 export interface RuleContext {
@@ -50,8 +50,16 @@ const SENIORITY_WORDS = [
 export const seniorityRule: Rule = (job, { config }) => {
   const rules = config.filters.seniority;
   const excluded = findKeyword(job.title, rules.exclude_any);
-  if (excluded) return [drop('seniority_excluded', excluded)];
-  if (rules.include_any.length === 0 || findKeyword(job.title, rules.include_any)) return [];
+  const included = findKeyword(job.title, rules.include_any);
+  if (excluded) {
+    // "Middle/Senior Engineer" is open to the wanted level too: keep it, with a remark
+    return [
+      included
+        ? flag('seniority_mixed', `${included}, ${excluded}`)
+        : drop('seniority_excluded', excluded),
+    ];
+  }
+  if (rules.include_any.length === 0 || included) return [];
 
   const stated = findKeyword(job.title, SENIORITY_WORDS);
   if (stated) return [drop('seniority_not_included', stated)];
@@ -73,6 +81,16 @@ const MIN_TEXT_FOR_STACK_CHECK = 200;
 /** How often an excluded language must appear before it is suspected to be the main one. */
 const PRIMARY_MENTIONS = 3;
 
+/**
+ * Mentions of a technology in running text. One- and two-letter names ("go", "r") are ordinary
+ * words in lowercase, so only their capitalised form counts.
+ */
+function countMentions(text: string, keyword: string): number {
+  if (keyword.length > 2) return countKeyword(text, keyword);
+  const capitalised = keyword.charAt(0).toUpperCase() + keyword.slice(1);
+  return text.match(keywordRegex(capitalised, 'gu'))?.length ?? 0;
+}
+
 export const stackRule: Rule = (job, { config }) => {
   const { required_any: required, exclude_primary: excluded } = config.filters.stack;
   const text = `${job.title}\n${job.description}`;
@@ -88,7 +106,7 @@ export const stackRule: Rule = (job, { config }) => {
   } else if (excluded.length > 0) {
     const wanted = Math.max(0, ...required.map((keyword) => countKeyword(text, keyword)));
     const heavy = excluded
-      .map((keyword) => ({ keyword, count: countKeyword(job.description, keyword) }))
+      .map((keyword) => ({ keyword, count: countMentions(job.description, keyword) }))
       .filter(({ count }) => count >= PRIMARY_MENTIONS && count > wanted)
       .sort((a, b) => b.count - a.count)[0];
     if (heavy) outcomes.push(flag('stack_primary_suspect', heavy.keyword));

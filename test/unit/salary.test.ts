@@ -50,7 +50,7 @@ describe('parseSalary', () => {
   });
 
   it('needs salary wording in free text when asked to', () => {
-    expect(pick('Get a $500 home office stipend.', true)).toBeNull();
+    expect(pick('Get a $500 voucher on your first day.', true)).toBeNull();
     expect(pick('The base salary range is $140,000 - $180,000.', true)).toEqual([
       140000,
       180000,
@@ -58,6 +58,32 @@ describe('parseSalary', () => {
       'year',
     ]);
     expect(pick('We offer $50/hour for this contract.', true)).toEqual([50, 50, 'USD', 'hour']);
+  });
+
+  it('does not mistake perks, budgets and company figures for pay', () => {
+    expect(pick('Benefits: €60/month Lifestyle allowance and a laptop.', true)).toBeNull();
+    expect(pick('You will own a $300K monthly marketing budget.', true)).toBeNull();
+    expect(pick('We offer a $1,500 - $2,000 home office stipend.', true)).toBeNull();
+    expect(pick('€50 per month gym membership', true)).toBeNull();
+    expect(pick('Salary: $5,000 per month + bonus', true)).toEqual([5000, 5000, 'USD', 'month']);
+  });
+
+  it('rejects amounts that cannot be pay for the stated period', () => {
+    expect(pick('€60/month')).toBeNull();
+    expect(pick('$2 per hour')).toBeNull();
+    expect(pick('$900 per hour')).toBeNull();
+    expect(pick('$1,200 per year')).toBeNull();
+  });
+
+  it('assumes a monthly figure for mid-sized amounts without a period', () => {
+    expect(pick('$400–800')).toEqual([400, 800, 'USD', 'month']);
+    expect(pick('$150')).toEqual([150, 150, 'USD', 'hour']);
+  });
+
+  it('keeps only the amount and its period as the source text', () => {
+    expect(parseSalary('Rate: $25/hour\nEmployment: full-time')?.text).toBe('$25/hour');
+    expect(parseSalary('$3,500/month for the first year')?.text).toBe('$3,500/month');
+    expect(parseSalary('€5,000–7,000 / month')?.text).toBe('€5,000–7,000 / month');
   });
 
   it('prefers the pay range over other amounts in the same text', () => {

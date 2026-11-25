@@ -82,6 +82,13 @@ describe('title and seniority', () => {
     ]);
   });
 
+  it('keeps a title that names both a wanted and an excluded level, with a remark', () => {
+    const result = run({ title: 'Staff/Senior Frontend Engineer' }, filters);
+    expect(result.dropReasons).toEqual([]);
+    expect(result.flags).toContain('seniority_mixed');
+    expect(result.details.seniority_mixed).toBe('senior, staff');
+  });
+
   it('flags or drops titles without a level', () => {
     expect(run({ title: 'Frontend Engineer' }, filters).flags).toContain('seniority_unstated');
     const strict = { ...filters, seniority: { ...filters.seniority, keep_if_unstated: false } };
@@ -141,6 +148,16 @@ describe('stack', () => {
     expect(run({ descriptionText: heavy }, filters).flags).toContain('stack_primary_suspect');
     const light = `${LONG} React, React Native and React Query. Java is a plus.`;
     expect(run({ descriptionText: light }, filters).flags).not.toContain('stack_primary_suspect');
+  });
+});
+
+describe('stack: short language names', () => {
+  it('counts only the capitalised form of one- and two-letter names', () => {
+    const filters = { stack: { required_any: ['react'], exclude_primary: ['go'] } };
+    const verbs = `${LONG} React. We go fast, go deep and go further. Go ahead and apply.`;
+    expect(run({ descriptionText: verbs }, filters).flags).not.toContain('stack_primary_suspect');
+    const language = `${LONG} React. Services in Go. Go 1.23. Strong Go skills. Go tooling.`;
+    expect(run({ descriptionText: language }, filters).flags).toContain('stack_primary_suspect');
   });
 });
 

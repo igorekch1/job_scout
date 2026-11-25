@@ -145,6 +145,7 @@ export async function ingestJob(db: Db, job: Job, options: IngestOptions): Promi
         verdict: filter.verdict,
         dropReasons: filter.dropReasons,
         flags: filter.flags,
+        filterDetails: filter.details,
         silent,
         createdAt: now,
         updatedAt: now,

@@ -25,6 +25,7 @@ export const DROP_REASONS = {
 /** Remarks on a kept posting. Shown on the card. */
 export const FLAGS = {
   seniority_unstated: 'Seniority not stated',
+  seniority_mixed: 'Title names both a wanted and an excluded level',
   stack_unknown: 'Too little text to check the stack',
   stack_primary_suspect: 'An excluded language features heavily',
   work_mode_unstated: 'Remote or on-site not stated',
