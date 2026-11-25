@@ -18,13 +18,17 @@ import { errorMessage, type Logger } from '../logger.js';
 import { formatSalary } from '../normalize/salary.js';
 import { buildSources } from '../sources/registry.js';
 import type { Tracker, TrackerEntry } from '../trackers/types.js';
+import { prepareDraft, type DraftDeps } from '../applications/draft.js';
+import { fetchQuestions } from '../applications/questions.js';
 import { truncate } from '../util/text.js';
 import {
   escapeHtml,
   formatDate,
   locationLine,
-  mainKeyboard,
+  mainKeyboard as baseKeyboard,
+  prepareKeyboard,
   rejectKeyboard,
+  renderDraft,
   renderCard,
   salaryOfRow,
   snoozeKeyboard,
@@ -43,6 +47,13 @@ export interface BotDeps {
   now?: () => Date;
   /** Skips the getMe call at startup; used by tests. */
   botInfo?: BotFullInfo;
+  /** Application drafting; the button is hidden when absent. */
+  drafter?: Omit<DraftDeps, 'db' | 'config' | 'now'>;
+  /**
+   * Receives long-running work (drafting) so the update handler can return at once. Defaults
+   * to fire-and-forget; tests collect the promises.
+   */
+  background?: (task: Promise<void>) => void;
 }
 
 export const COMMANDS = [
@@ -60,6 +71,7 @@ const HELP = [
   '✅ Add to tracker: checks the posting is still open, then saves it',
   '❌ Reject: pick a reason; reasons are stored to tune filters',
   '💤 Later: hides the card and sends it again after the chosen time',
+  '📝 Prepare application: drafts answers and a cover letter from your profile (when enabled)',
   '',
   '<b>Commands</b>',
   ...COMMANDS.map(({ command, description }) => `/${command}: ${description}`),
@@ -83,6 +95,14 @@ export function createBot(deps: BotDeps): Bot {
   const { db, config, tracker, http, logger } = deps;
   const now = deps.now ?? (() => new Date());
   const allowed = new Set(config.telegram.allowed_chat_ids);
+  const drafter = deps.drafter;
+  const mainKeyboard = (jobId: number) => baseKeyboard(jobId, { prepare: drafter !== undefined });
+  const background =
+    deps.background ??
+    ((task: Promise<void>) => {
+      void task;
+    });
+  const drafting = new Set<number>();
   const bot = new Bot(deps.token, deps.botInfo ? { botInfo: deps.botInfo } : {});
 
   /* ----------------------------------------------------------- access */
@@ -272,6 +292,7 @@ export function createBot(deps: BotDeps): Bot {
         ctx,
         { ...card, job: { ...job, state: 'tracked' } },
         `${result.duplicate ? `✅ Already in ${where}` : `✅ Added to ${where}`}${skipped}`,
+        drafter ? prepareKeyboard(job.id) : undefined,
       );
     } catch (error) {
       logger.error({ jobId: job.id, err: error }, 'tracker insert failed');
@@ -404,6 +425,65 @@ export function createBot(deps: BotDeps): Bot {
     if (!card) return;
     await ctx.answerCallbackQuery();
     await edit(ctx, card, undefined, mainKeyboard(card.job.id));
+  });
+
+  bot.callbackQuery(/^p:(\d+)$/, async (ctx) => {
+    const jobId = Number(ctx.match[1]);
+    if (!drafter) {
+      await ctx.answerCallbackQuery({ text: 'Application drafts are not enabled.' });
+      return;
+    }
+    if (drafting.has(jobId)) {
+      await ctx.answerCallbackQuery({ text: 'Already preparing this one…' });
+      return;
+    }
+    const card = await loadCard(db, jobId);
+    if (!card) {
+      await ctx.answerCallbackQuery({ text: 'This job is no longer stored.' });
+      return;
+    }
+    await ctx.answerCallbackQuery({ text: 'Preparing the application draft…' });
+    const chatId = ctx.chat!.id;
+    drafting.add(jobId);
+
+    const task = (async () => {
+      try {
+        let questions;
+        try {
+          questions = await fetchQuestions(card.links, http);
+        } catch (error) {
+          logger.warn({ jobId, err: error }, 'could not load application questions');
+          questions = { questions: [], skipped: [], origin: null };
+        }
+        const result = await prepareDraft({ ...drafter, db, config, now }, card.job, questions);
+        if (result.kind === 'budget') {
+          await ctx.api.sendMessage(
+            chatId,
+            `💸 Today's LLM budget is spent ($${result.spent.toFixed(2)} of $${config.scoring.daily_budget_usd.toFixed(2)}). Try again tomorrow or raise scoring.daily_budget_usd.`,
+          );
+          return;
+        }
+        if (result.kind === 'declined') {
+          await ctx.api.sendMessage(chatId, '⚠️ The model declined to draft this application.');
+          return;
+        }
+        for (const message of renderDraft(card.job, result.draft)) {
+          await ctx.api.sendMessage(chatId, message, HTML);
+        }
+      } catch (error) {
+        logger.error({ jobId, err: error }, 'application draft failed');
+        await ctx.api
+          .sendMessage(
+            chatId,
+            `⚠️ Could not prepare the draft: ${escapeHtml(truncate(errorMessage(error), 200))}`,
+            HTML,
+          )
+          .catch(() => undefined);
+      } finally {
+        drafting.delete(jobId);
+      }
+    })();
+    background(task);
   });
 
   bot.on('callback_query', (ctx) => ctx.answerCallbackQuery({ text: 'Unknown action.' }));

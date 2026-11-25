@@ -1,6 +1,6 @@
 import { InlineKeyboard } from 'grammy';
 import type { Config } from '../config/schema.js';
-import type { JobLinkRow, JobRow, LlmScoreRow } from '../db/schema.js';
+import type { ApplicationDraftRow, JobLinkRow, JobRow, LlmScoreRow } from '../db/schema.js';
 import { FLAGS } from '../filters/types.js';
 import type { Salary, SalaryPeriod } from '../normalize/job.js';
 import { formatSalary } from '../normalize/salary.js';
@@ -134,14 +134,27 @@ export const CALLBACK = {
   snooze: (jobId: number) => `s:${jobId}`,
   snoozeFor: (jobId: number, hours: number) => `ss:${jobId}:${hours}`,
   back: (jobId: number) => `b:${jobId}`,
+  prepare: (jobId: number) => `p:${jobId}`,
 } as const;
 
-export function mainKeyboard(jobId: number): InlineKeyboard {
-  return new InlineKeyboard()
+export interface KeyboardOptions {
+  /** Show "Prepare application" (when drafting is configured). */
+  prepare?: boolean;
+}
+
+export function mainKeyboard(jobId: number, options: KeyboardOptions = {}): InlineKeyboard {
+  const keyboard = new InlineKeyboard()
     .text('✅ Add to tracker', CALLBACK.track(jobId))
     .text('❌ Reject', CALLBACK.reject(jobId))
     .row()
     .text('💤 Later', CALLBACK.snooze(jobId));
+  if (options.prepare) keyboard.text('📝 Prepare application', CALLBACK.prepare(jobId));
+  return keyboard;
+}
+
+/** Left on a card after it is tracked, so an application can still be drafted. */
+export function prepareKeyboard(jobId: number): InlineKeyboard {
+  return new InlineKeyboard().text('📝 Prepare application', CALLBACK.prepare(jobId));
 }
 
 export function rejectKeyboard(jobId: number, reasons: readonly string[]): InlineKeyboard {
@@ -207,5 +220,49 @@ export function renderDigest(
     current += line;
   });
   messages.push(current);
+  return messages;
+}
+
+/**
+ * An application draft as Telegram messages. Every answer sits in its own <pre> block, which
+ * Telegram copies with one tap.
+ */
+export function renderDraft(job: JobRow, draft: ApplicationDraftRow): string[] {
+  const head = [
+    `📝 <b>Application draft</b>: ${escapeHtml(truncate(job.title, 120))}${job.company ? ` at ${escapeHtml(truncate(job.company, 80))}` : ''}`,
+    'Built only from your profile. Read every answer before you paste it; ✏️ marks what you must fill in yourself.',
+  ].join('\n');
+
+  const blocks: string[] = [head];
+  if (draft.coverLetter) {
+    blocks.push(`<b>Cover letter</b>\n<pre>${escapeHtml(draft.coverLetter)}</pre>`);
+  }
+  draft.answers.forEach((answer, index) => {
+    const label = `<b>${index + 1}. ${escapeHtml(truncate(answer.question, 300))}</b>${answer.required ? ' (required)' : ''}`;
+    if (answer.needsInput) {
+      const partial = answer.answer ? `\n<pre>${escapeHtml(answer.answer)}</pre>` : '';
+      blocks.push(
+        `${label}${partial}\n✏️ ${escapeHtml(answer.note || 'Your profile does not cover this.')}`,
+      );
+    } else {
+      blocks.push(`${label}\n<pre>${escapeHtml(answer.answer)}</pre>`);
+    }
+  });
+  if (draft.skipped.length > 0) {
+    blocks.push(`<i>Fill in yourself: ${escapeHtml(truncate(draft.skipped.join('; '), 600))}</i>`);
+  }
+
+  const messages: string[] = [];
+  let current = '';
+  for (const block of blocks) {
+    const piece =
+      block.length > TELEGRAM_LIMIT - 10 ? `${block.slice(0, TELEGRAM_LIMIT - 20)}</pre>` : block;
+    if (current && current.length + piece.length + 2 > TELEGRAM_LIMIT) {
+      messages.push(current);
+      current = '';
+    }
+    current = current ? `${current}\n\n${piece}` : piece;
+  }
+  if (current) messages.push(current);
   return messages;
 }

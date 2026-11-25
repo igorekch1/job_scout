@@ -16,6 +16,8 @@ export interface OutboxDeps {
   logger: Logger;
   now?: () => Date;
   sleep?: (ms: number) => Promise<void>;
+  /** Show the "Prepare application" button on cards. */
+  prepare?: boolean;
 }
 
 export interface OutboxResult {
@@ -183,7 +185,11 @@ export class Outbox {
           { job, links: linksByJob.get(job.id) ?? [], score: scores.get(job.id) ?? null },
           config,
         );
-        const message = await this.send(chatId, text, mainKeyboard(job.id));
+        const message = await this.send(
+          chatId,
+          text,
+          mainKeyboard(job.id, { prepare: this.deps.prepare === true }),
+        );
         await db
           .update(deliveries)
           .set({
