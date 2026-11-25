@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Secrets and personal files: never commit these
+.env
+.env.*
+!.env.example
+config.yaml
+profile.md
+*.session
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
