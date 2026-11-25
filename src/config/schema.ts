@@ -173,35 +173,83 @@ const leverSchema = z
   .strictObject({
     enabled: enabled(false),
     interval_minutes: intervalMinutes,
-    companies: z.array(slug).default([]).describe('Lever company slugs to watch.'),
+    companies: z
+      .array(slug)
+      .default([])
+      .describe('Lever site names to watch (the part after jobs.lever.co/).'),
+    eu_companies: z
+      .array(slug)
+      .default([])
+      .describe("Site names hosted on Lever's EU instance (jobs.eu.lever.co)."),
   })
-  .describe('Lever public postings API. Not implemented yet.');
+  .describe('Lever public postings API.');
+
+const keywordFilter = (what: string) =>
+  keywordList(
+    `Keep only jobs whose ${what} mention one of these. Applied locally, so each run costs one request. Empty keeps all.`,
+  );
 
 const himalayasSchema = z
   .strictObject({
     enabled: enabled(false),
     interval_minutes: intervalMinutes,
-    queries: keywordList('Search queries.'),
+    queries: keywordList(
+      'Search queries, one request each, newest first. Empty reads the latest jobs feed.',
+    ),
   })
-  .describe('Himalayas public remote-jobs API. Not implemented yet.');
+  .describe(
+    'Himalayas public remote-jobs API. Polled at most hourly (its responses are cached for an hour). Cards link to Himalayas as its terms require.',
+  );
 
 const remotiveSchema = z
   .strictObject({
     enabled: enabled(false),
     interval_minutes: intervalMinutes,
-    category: z.string().trim().min(1).optional().describe('Remotive category slug.'),
-    search: keywordList('Search terms.'),
+    category: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe('Remotive category slug, e.g. "software-dev".'),
+    search: keywordFilter('title, tags or description'),
   })
-  .describe('Remotive public remote-jobs API. Not implemented yet.');
+  .describe(
+    'Remotive public API. Polled at most every 6 hours (Remotive asks for at most 4 requests a day); its jobs appear with a 24-hour delay. Cards link to Remotive as its terms require.',
+  );
 
-const taggedApi = (name: string) =>
-  z
-    .strictObject({
-      enabled: enabled(false),
-      interval_minutes: intervalMinutes,
-      tags: keywordList('Tags to query.'),
-    })
-    .describe(`${name} public remote-jobs API. Not implemented yet.`);
+const remoteOkSchema = z
+  .strictObject({
+    enabled: enabled(false),
+    interval_minutes: intervalMinutes,
+    tags: keywordList(
+      'RemoteOK tags to query, one request each (e.g. react, javascript). Empty reads the latest 100 jobs of every category.',
+    ),
+  })
+  .describe(
+    'RemoteOK public API. Polled at most hourly. Cards link to Remote OK as its terms require.',
+  );
+
+const jobicySchema = z
+  .strictObject({
+    enabled: enabled(false),
+    interval_minutes: intervalMinutes,
+    tags: keywordFilter('title, industry or description'),
+    geo: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe('Jobicy region slug, e.g. "europe" or "anywhere".'),
+    industry: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe('Jobicy industry slug, e.g. "engineering".'),
+  })
+  .describe(
+    'Jobicy public API. Polled at most hourly as Jobicy asks; listings appear about 3 hours after publication. Cards link to Jobicy as its terms require.',
+  );
 
 const telegramChannelsSchema = z
   .strictObject({
@@ -221,8 +269,8 @@ const sourcesSchema = z
     lever: leverSchema.prefault({}),
     himalayas: himalayasSchema.prefault({}),
     remotive: remotiveSchema.prefault({}),
-    remoteok: taggedApi('RemoteOK').prefault({}),
-    jobicy: taggedApi('Jobicy').prefault({}),
+    remoteok: remoteOkSchema.prefault({}),
+    jobicy: jobicySchema.prefault({}),
     telegram_channels: telegramChannelsSchema.prefault({}),
   })
   .describe('Where jobs come from. Every source is optional and off by default.');

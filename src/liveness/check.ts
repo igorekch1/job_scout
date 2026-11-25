@@ -2,6 +2,7 @@ import { HttpError, type HttpClient } from '../http/client.js';
 import { errorMessage } from '../logger.js';
 import { ashbyBoardUrl } from '../sources/ashby.js';
 import { greenhouseJobUrl } from '../sources/greenhouse.js';
+import { leverApiBase } from '../sources/lever.js';
 
 export type LivenessStatus = 'open' | 'closed' | 'unknown';
 
@@ -89,6 +90,22 @@ export async function checkLiveness(
 
   const greenhouse = target.links.find((link) => link.sourceType === 'greenhouse');
   if (greenhouse) return checkGreenhouse(get, slugOf(greenhouse.sourceId), greenhouse.externalId);
+
+  const lever = target.links.find((link) => link.sourceType === 'lever');
+  if (lever) {
+    // Lever answers 404 for a posting that is no longer published
+    return probe(async () => {
+      const site = slugOf(lever.sourceId);
+      const eu = /\.eu\.lever\.co/i.test(lever.url);
+      await get(
+        `${leverApiBase(eu)}/${encodeURIComponent(site)}/${encodeURIComponent(lever.externalId)}?mode=json`,
+        {
+          accept: 'application/json',
+        },
+      );
+      return { status: 'open', detail: 'listed on the Lever board' };
+    });
+  }
 
   const ashby = target.links.find((link) => link.sourceType === 'ashby');
   if (ashby) return checkAshby(get, slugOf(ashby.sourceId), ashby.externalId);

@@ -51,8 +51,21 @@ export function formatDate(date: Date, timeZone: string, withTime = false): stri
 }
 
 /** Display name of a link: the board or feed it came from. */
+/** Board names as their terms ask to be credited. */
+const SOURCE_NAMES: Readonly<Record<string, string>> = {
+  greenhouse: 'Greenhouse',
+  ashby: 'Ashby',
+  lever: 'Lever',
+  remoteok: 'Remote OK',
+  remotive: 'Remotive',
+  jobicy: 'Jobicy',
+  himalayas: 'Himalayas',
+};
+
 const linkLabel = (link: Pick<JobLinkRow, 'sourceType' | 'sourceId'>): string =>
-  link.sourceType === 'rss' ? link.sourceId.replace(/^rss:/, '') : link.sourceType;
+  link.sourceType === 'rss'
+    ? link.sourceId.replace(/^rss:/, '')
+    : (SOURCE_NAMES[link.sourceType] ?? link.sourceType);
 
 export interface CardData {
   job: JobRow;

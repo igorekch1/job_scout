@@ -5,7 +5,8 @@ sends each match to you as a card you can act on in one tap.
 
 The goal is speed: a matching job should reach you within minutes of being published.
 
-> **Status:** working today: RSS/Atom, Greenhouse and Ashby sources, the rule filter,
+> **Status:** working today: RSS/Atom, Greenhouse, Ashby, Lever, Himalayas, Remotive, RemoteOK and
+> Jobicy sources, the rule filter,
 > deduplication, optional LLM scoring, Telegram cards with _Add to tracker_, _Reject_, _Later_
 > and _Prepare application_, the built-in Postgres tracker and the Notion tracker. See the [roadmap](#roadmap) for what comes
 > next.
@@ -70,6 +71,23 @@ and the `bot` that talks to Telegram. Follow the logs with `docker compose logs 
 
 On the first run of a source, postings without a publish date are stored quietly, so adding a board
 does not flood your chat with its whole backlog. Dated postings are subject to `filters.max_age_days`.
+
+### Sources
+
+| Source     | What it reads                                           | Polling          |
+| ---------- | ------------------------------------------------------- | ---------------- |
+| RSS / Atom | Any job board feed URL, e.g. a saved search             | your interval    |
+| Greenhouse | Public board API of each company slug you list          | your interval    |
+| Ashby      | Public posting API of each company slug                 | your interval    |
+| Lever      | Public postings API of each site name (EU instance too) | your interval    |
+| Himalayas  | Remote jobs search API, one request per query           | at least hourly  |
+| Remotive   | Remote jobs API, one request per run, filtered locally  | at least 6 hours |
+| RemoteOK   | Remote jobs API, one request per tag                    | at least hourly  |
+| Jobicy     | Remote jobs API, one request per run, filtered locally  | at least hourly  |
+
+The minimum intervals follow each provider's published guidance and cannot be lowered in config.
+Remotive shows jobs 24 hours after publication and Jobicy about 3 hours after, by their own design.
+Cards credit these boards by name and link to their page, as their terms require.
 
 ### Create the bot token
 
@@ -247,7 +265,7 @@ src/
   config/      Zod schema, YAML and env loading
   db/          Drizzle schema, client, stores
   http/        polite HTTP client: User-Agent, ETag cache, backoff, per-host throttle
-  sources/     collectors: rss, greenhouse, ashby
+  sources/     collectors: rss, greenhouse, ashby, lever, himalayas, remotive, remoteok, jobicy
   normalize/   Job shape; salary, location and hours parsers
   dedup/       canonical URL and fuzzy key
   filters/     rule filter with reason codes
@@ -274,8 +292,12 @@ them. That gives one rate limiter and one place that decides between cards and a
 
 job-scout is built to be a polite, low-volume reader of data that sites publish for this purpose.
 
-- **Public feeds and APIs only.** RSS/Atom feeds and the public job board APIs of Greenhouse and
-  Ashby. No HTML scraping of pages behind a login, no LinkedIn scraping, no CAPTCHA solving.
+- **Public feeds and APIs only.** RSS/Atom feeds, the public job board APIs of Greenhouse, Ashby and
+  Lever, and the public APIs of Himalayas, Remotive, RemoteOK and Jobicy. No HTML scraping of pages
+  behind a login, no LinkedIn scraping, no CAPTCHA solving.
+- **Provider terms are built in.** Remotive is polled at most every 6 hours (it asks for at most 4
+  requests a day); Himalayas, RemoteOK and Jobicy at most hourly. Their jobs are shown with a link
+  to their page and their name, as their terms ask, and are only sent to you, never republished.
 - **No auto-apply.** The bot never submits an application and never messages an employer. It
   prepares information; you act.
 - **Identifies itself.** Every request carries a descriptive `User-Agent` (`job-scout/<version>`).
@@ -295,9 +317,8 @@ full access to the account.
 
 ## Roadmap
 
-1. More sources: Lever, Himalayas, Remotive, RemoteOK, Jobicy.
-2. Telegram channel reader through your own account.
-3. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
+1. Telegram channel reader through your own account.
+2. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
 
 ## License
 

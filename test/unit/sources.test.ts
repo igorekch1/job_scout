@@ -258,8 +258,9 @@ describe('registry', () => {
     expect(sources.map((source) => [source.id, source.intervalMinutes])).toEqual([
       ['greenhouse:acmerobotics', 20],
       ['rss:a', 5],
+      ['lever:globex', 20],
     ]);
-    expect(unsupported).toEqual(['lever']);
+    expect(unsupported).toEqual([]);
   });
 
   it('prettifies board slugs', () => {

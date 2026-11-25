@@ -1,0 +1,31 @@
+[
+  { "last_updated": 1772712000, "legal": "Fake notice for tests." },
+  {
+    "slug": "remote-senior-frontend-engineer-acme-robotics-900001",
+    "id": "900001",
+    "epoch": 1772712000,
+    "date": "2026-03-05T12:00:00+00:00",
+    "company": "Acme Robotics",
+    "position": "Senior Frontend Engineer",
+    "tags": ["react", "javascript"],
+    "description": "&lt;p&gt;Remote role building React UIs.&lt;/p&gt;",
+    "location": "Worldwide",
+    "salary_min": 100000,
+    "salary_max": 130000,
+    "url": "https://remoteok.com/remote-jobs/900001"
+  },
+  {
+    "slug": "remote-account-manager-globex-900002",
+    "id": "900002",
+    "epoch": 1772625600,
+    "date": "2026-03-04T12:00:00+00:00",
+    "company": "Globex",
+    "position": "Account Manager",
+    "tags": ["sales"],
+    "description": "Sales role.",
+    "location": "",
+    "salary_min": 0,
+    "salary_max": 0,
+    "url": "https://remoteok.com/remote-jobs/900002"
+  }
+]
