@@ -5,12 +5,6 @@ sends each match to you as a card you can act on in one tap.
 
 The goal is speed: a matching job should reach you within minutes of being published.
 
-> **Status:** working today: RSS/Atom, Greenhouse, Ashby, Lever, Himalayas, Remotive, RemoteOK,
-> Jobicy and Telegram channel sources, the rule filter,
-> deduplication, optional LLM scoring, Telegram cards with _Add to tracker_, _Reject_, _Later_
-> and _Prepare application_, the built-in Postgres tracker and the Notion tracker. See the [roadmap](#roadmap) for what comes
-> next.
-
 ## What it does
 
 1. **Collects** postings from the sources you enable, each on its own interval (10 to 15 minutes by
@@ -225,14 +219,24 @@ value that is not an existing select option is skipped and listed on the card, u
 
 ## Commands
 
-| Command    | What it does                                                    |
-| ---------- | --------------------------------------------------------------- |
-| `/start`   | Confirms the chat is set up, or tells a new chat its ID         |
-| `/help`    | Explains the buttons and commands                               |
-| `/status`  | Source health, last run of each source, counts, worker liveness |
-| `/filters` | Shows the active filter rules                                   |
-| `/pause`   | Stops collecting and sending                                    |
-| `/resume`  | Resumes after `/pause`                                          |
+| Command           | What it does                                                       |
+| ----------------- | ------------------------------------------------------------------ |
+| `/start`          | Confirms the chat is set up, or tells a new chat its ID            |
+| `/help`           | Explains the buttons and commands                                  |
+| `/status`         | Source health, last run of each source, counts, tracker, LLM spend |
+| `/digest`         | Summary of the last 24 hours: counts, top picks, failing sources   |
+| `/search <words>` | Stored jobs whose title, company or description contain every word |
+| `/stats`          | Found, kept, dropped by reason, tracked, rejected by reason        |
+| `/sources`        | Turn individual sources on or off with buttons                     |
+| `/filters`        | Shows the active filter rules                                      |
+| `/pause`          | Stops collecting and sending                                       |
+| `/resume`         | Resumes after `/pause`                                             |
+
+With `telegram.digest.enabled: true`, the same digest as `/digest` arrives every day at
+`telegram.digest.time` in your time zone. It is sent once per day, also across restarts.
+
+Sources switched off with `/sources` stay off until you switch them on again; sources disabled in
+`config.yaml` do not appear there.
 
 ## Configuration
 
@@ -356,10 +360,6 @@ job-scout is built to be a polite, low-volume reader of data that sites publish 
 The optional Telegram channel reader uses **your own Telegram account** through a session string.
 It is off by default, read-only, and documented in [Telegram channels](#telegram-channels), because
 a session string gives full access to the account.
-
-## Roadmap
-
-1. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
 
 ## License
 

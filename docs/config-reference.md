@@ -181,7 +181,7 @@ Telegram delivery (requires TELEGRAM_BOT_TOKEN).
 | `telegram.snooze_hours` | list of integer | `[4,24,72]` | Choices offered by the Snooze button, in hours. |
 | `telegram.reject_reasons` | list of string | `["Location","Pay","Hours","Stack","Level","Not interested"]` | Choices offered by the Reject button. Stored to tune filters later. |
 | `telegram.digest` | object |  | Scheduled daily digest. |
-| `telegram.digest.enabled` | boolean | `false` | Send a daily summary. Not implemented yet. |
+| `telegram.digest.enabled` | boolean | `false` | Send a daily summary: counts, top picks and failing sources. |
 | `telegram.digest.time` | string | `"09:00"` | Local time of the daily summary. |
 
 ## `tracker`

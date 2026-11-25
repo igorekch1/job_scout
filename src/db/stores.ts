@@ -31,6 +31,19 @@ export class DbValidatorStore implements ValidatorStore {
 
 export const SETTING_PAUSED = 'paused';
 export const SETTING_WORKER_HEARTBEAT = 'worker_heartbeat';
+export const SETTING_DISABLED_SOURCES = 'disabled_sources';
+export const SETTING_DIGEST_SENT_DAY = 'digest_sent_day';
+
+/** Source ids switched off with /sources. */
+export const getDisabledSources = async (db: Db): Promise<Set<string>> =>
+  new Set((await getSetting<string[]>(db, SETTING_DISABLED_SOURCES)) ?? []);
+
+export async function setSourceEnabled(db: Db, sourceId: string, enabled: boolean): Promise<void> {
+  const disabled = await getDisabledSources(db);
+  if (enabled) disabled.delete(sourceId);
+  else disabled.add(sourceId);
+  await setSetting(db, SETTING_DISABLED_SOURCES, [...disabled].sort());
+}
 
 export async function getSetting<T>(db: Db, key: string): Promise<T | undefined> {
   const [row] = await db.select().from(settings).where(eq(settings.key, key)).limit(1);

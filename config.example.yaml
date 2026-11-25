@@ -114,7 +114,7 @@ telegram:
   batch_threshold: 5 # more than N waiting jobs -> one digest message
   snooze_hours: [4, 24, 72]
   reject_reasons: [Location, Pay, Hours, Stack, Level, 'Not interested']
-  digest: { enabled: false, time: '09:00' }
+  digest: { enabled: false, time: '09:00' } # daily summary in user.timezone
 
 # ------------------------------------------------------------------ tracker
 tracker:
