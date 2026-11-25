@@ -13,7 +13,7 @@ export const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../drizzle', import.m
 export interface DbHandle {
   db: Db;
   pool: pg.Pool;
-  close(): Promise<void>;
+  close: () => Promise<void>;
 }
 
 export function createDb(databaseUrl: string): DbHandle {

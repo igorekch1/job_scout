@@ -212,8 +212,8 @@ describe('registry', () => {
     });
     const { sources, unsupported } = buildSources(config);
     expect(sources.map((source) => [source.id, source.intervalMinutes])).toEqual([
-      ['rss:a', 5],
       ['greenhouse:acmerobotics', 20],
+      ['rss:a', 5],
     ]);
     expect(unsupported).toEqual(['lever']);
   });

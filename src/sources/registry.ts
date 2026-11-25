@@ -26,11 +26,7 @@ export function buildSources(config: Config): SourceRegistry {
   const interval = (own: number | undefined): number => own ?? schedule.default_interval_minutes;
   const sources: Source[] = [];
 
-  if (settings.rss.enabled) {
-    for (const feed of settings.rss.feeds) {
-      sources.push(createRssSource(feed, interval(settings.rss.interval_minutes)));
-    }
-  }
+  // Employer ATS boards first: when everything is due at once, their link becomes the primary one.
   if (settings.greenhouse.enabled) {
     for (const board of new Set(settings.greenhouse.boards)) {
       sources.push(createGreenhouseSource(board, interval(settings.greenhouse.interval_minutes)));
@@ -39,6 +35,12 @@ export function buildSources(config: Config): SourceRegistry {
   if (settings.ashby.enabled) {
     for (const board of new Set(settings.ashby.boards)) {
       sources.push(createAshbySource(board, interval(settings.ashby.interval_minutes)));
+    }
+  }
+
+  if (settings.rss.enabled) {
+    for (const feed of settings.rss.feeds) {
+      sources.push(createRssSource(feed, interval(settings.rss.interval_minutes)));
     }
   }
 
