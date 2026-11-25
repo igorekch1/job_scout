@@ -12,8 +12,13 @@ export function keywordRegex(keyword: string, flags = 'iu'): RegExp {
   const key = `${flags}:${keyword}`;
   let regex = cache.get(key);
   if (!regex) {
-    const body = escapeRegex(keyword.trim()).replace(/\s+/g, '\\s+');
-    regex = new RegExp(`(?<!${WORD})${body}(?!${WORD})`, flags);
+    const trimmed = keyword.trim();
+    const body = escapeRegex(trimmed).replace(/\s+/g, '\\s+');
+    // a boundary only makes sense next to a letter or digit: ".net" and "c++" have none there
+    const edge = new RegExp(WORD, 'u');
+    const before = edge.test(trimmed.charAt(0)) ? `(?<!${WORD})` : '';
+    const after = edge.test(trimmed.charAt(trimmed.length - 1)) ? `(?!${WORD})` : '';
+    regex = new RegExp(`${before}${body}${after}`, flags);
     cache.set(key, regex);
   }
   return regex;
