@@ -16,7 +16,7 @@ import { checkLiveness } from '../liveness/check.js';
 import { errorMessage, type Logger } from '../logger.js';
 import { formatSalary } from '../normalize/salary.js';
 import { buildSources } from '../sources/registry.js';
-import type { Tracker } from '../trackers/types.js';
+import type { Tracker, TrackerEntry } from '../trackers/types.js';
 import { truncate } from '../util/text.js';
 import {
   escapeHtml,
@@ -30,7 +30,7 @@ import {
   unknownLivenessKeyboard,
   type CardData,
 } from './cards.js';
-import { loadCard, loadCounts, resolveJob, snoozeJob } from './queries.js';
+import { loadCard, loadCounts, recordExternal, resolveJob, snoozeJob } from './queries.js';
 
 export interface BotDeps {
   token: string;
@@ -123,11 +123,12 @@ export function createBot(deps: BotDeps): Bot {
 
   bot.command('status', async (ctx) => {
     const at = now();
-    const [paused, heartbeat, states, counts] = await Promise.all([
+    const [paused, heartbeat, states, counts, health] = await Promise.all([
       isPaused(db),
       getSetting<string>(db, SETTING_WORKER_HEARTBEAT),
       getSourceStates(db),
       loadCounts(db),
+      tracker.health?.(),
     ]);
     const { sources, unsupported } = buildSources(config);
 
@@ -135,6 +136,7 @@ export function createBot(deps: BotDeps): Bot {
       `<b>Status:</b> ${paused ? '⏸ paused' : '▶️ running'}`,
       `<b>Worker:</b> ${heartbeat ? `last seen ${ago(new Date(heartbeat), at)}` : 'not seen yet'}`,
       `<b>Jobs:</b> ${counts.found} found · ${counts.kept} kept · ${counts.dropped} dropped`,
+      `<b>Tracker:</b> ${escapeHtml(tracker.id)}${health ? ` ${health.ok ? '✅' : `❌ ${escapeHtml(truncate(health.detail, 200))}`}` : ''}`,
       `<b>Yours:</b> ${counts.tracked} tracked · ${counts.rejected} rejected · ${counts.waiting} waiting`,
       '',
       '<b>Sources</b>',
@@ -224,7 +226,7 @@ export function createBot(deps: BotDeps): Bot {
     const { job, links } = card;
     const at = now();
     try {
-      const result = await tracker.add({
+      const entry: TrackerEntry = {
         jobId: job.id,
         company: job.company,
         title: job.title,
@@ -234,6 +236,7 @@ export function createBot(deps: BotDeps): Bot {
           ...links.map((link) => link.url).filter((url) => url !== job.primaryUrl),
         ],
         source: job.primarySourceType,
+        sourceId: job.primarySourceId,
         salary: formatSalary(salaryOfRow(job)),
         location: locationLine(job),
         workMode: job.workMode,
@@ -241,7 +244,9 @@ export function createBot(deps: BotDeps): Bot {
         priority: null,
         postedAt: job.postedAt,
         addedAt: at,
-      });
+      };
+      const result = await tracker.add(entry);
+      if (tracker.id !== 'postgres') await recordExternal(db, entry, tracker.id, result);
       await resolveJob(db, {
         jobId: job.id,
         chatId: ctx.chat!.id,
@@ -250,10 +255,13 @@ export function createBot(deps: BotDeps): Bot {
         now: at,
       });
       const where = result.url ? `<a href="${escapeHtml(result.url)}">tracker</a>` : 'tracker';
+      const skipped = result.skipped?.length
+        ? `\n⚠️ Not written: ${escapeHtml(truncate(result.skipped.join('; '), 300))}`
+        : '';
       await edit(
         ctx,
         { job: { ...job, state: 'tracked' }, links },
-        result.duplicate ? `✅ Already in ${where}` : `✅ Added to ${where}`,
+        `${result.duplicate ? `✅ Already in ${where}` : `✅ Added to ${where}`}${skipped}`,
       );
     } catch (error) {
       logger.error({ jobId: job.id, err: error }, 'tracker insert failed');
@@ -279,6 +287,7 @@ export function createBot(deps: BotDeps): Bot {
     const liveness = await checkLiveness(
       { primaryUrl: card.job.primaryUrl, links: card.links },
       http,
+      { closedPatterns: config.tracker.closed_patterns },
     );
     if (liveness.status === 'closed') {
       await resolveJob(db, {

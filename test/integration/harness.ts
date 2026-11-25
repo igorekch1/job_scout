@@ -147,7 +147,16 @@ export interface Harness {
 
 export const CHAT = 1001;
 
-export async function createHarness(config: Config, startAt: string): Promise<Harness> {
+export interface HarnessOptions {
+  /** Answers requests to api.notion.com; enables the Notion tracker. */
+  notionFetch?: typeof fetch;
+}
+
+export async function createHarness(
+  config: Config,
+  startAt: string,
+  options: HarnessOptions = {},
+): Promise<Harness> {
   const { db, close } = await createTestDb();
   const web = new FakeWeb();
   const clock = { now: new Date(startAt) };
@@ -165,7 +174,10 @@ export async function createHarness(config: Config, startAt: string): Promise<Ha
     token: 'test-token',
     db,
     config,
-    tracker: createTracker(config, db),
+    tracker: createTracker(config, db, {
+      notionToken: options.notionFetch ? 'secret_test' : undefined,
+      fetch: options.notionFetch,
+    }),
     http,
     logger: silentLogger,
     now,
