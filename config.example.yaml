@@ -1,0 +1,118 @@
+# job-scout configuration.
+# Copy to config.yaml (gitignored) and edit. Secrets live in .env, never here.
+# Full reference: docs/config-reference.md
+
+user:
+  timezone: Europe/Amsterdam # IANA zone
+  country: NL # ISO 3166-1 alpha-2
+  country_aliases: [netherlands, holland]
+
+app:
+  log_level: info
+  user_agent_contact: '' # optional URL/email appended to the User-Agent
+
+schedule:
+  default_interval_minutes: 15
+  max_concurrent_sources: 3
+
+# ------------------------------------------------------------------ sources
+sources:
+  rss:
+    enabled: true
+    interval_minutes: 10
+    feeds:
+      - id: example-board-frontend
+        url: 'https://jobs.example.com/feeds/frontend.rss'
+        title_pattern: '^(?<title>.+) at (?<company>.+)$' # optional, named groups
+        defaults: { remote: true } # optional hints the feed does not carry
+  greenhouse:
+    enabled: true
+    boards: [examplecompany]
+  ashby:
+    enabled: true
+    boards: [example-company]
+
+  # The sources below are planned and not implemented yet.
+  lever: { enabled: false, companies: [] }
+  himalayas: { enabled: false, queries: [] }
+  remotive: { enabled: false, category: software-dev, search: [] }
+  remoteok: { enabled: false, tags: [] }
+  jobicy: { enabled: false, tags: [] }
+  telegram_channels: # uses YOUR account via TG_API_ID / TG_API_HASH / TG_SESSION
+    enabled: false
+    channels: []
+
+dedup:
+  window_days: 14
+  primary_source_priority: [greenhouse, ashby, lever, rss]
+
+# ------------------------------------------------------------------ filters
+# Every rule is optional. Remove a block to switch that rule off.
+filters:
+  max_age_days: 3
+  title:
+    include_any: [frontend, 'full stack', 'software engineer']
+    exclude_any: [qa, devops, designer]
+  seniority:
+    include_any: [senior, lead]
+    exclude_any: [junior, intern, staff, principal]
+    keep_if_unstated: true
+  stack:
+    required_any: [react, typescript, 'node.js']
+    exclude_primary: [java, php, ruby] # dropped only when it is the role's main language
+  employment:
+    full_time: { allowed: true }
+    part_time: { allowed: true }
+    contract: { allowed: true }
+  location:
+    allowed_regions: [worldwide, europe, emea]
+    allowed_countries: []
+    blocked_countries: []
+    require_user_country_when_restricted: true # "US, CA only" is dropped unless it lists user.country
+    onsite_cities_allowed: [] # empty = remote only
+    always_blocked:
+      countries: []
+      signals: [] # keywords/domains anywhere in the posting
+    keep_if_unstated: true
+  pay:
+    currency: USD # floors below are in this currency
+    full_time_min_monthly: 3000
+    hourly_min: 25 # part-time and contract
+    hours_per_month: 160
+    keep_if_unstated: true # kept and marked "pay not stated"
+    fx_rates: { USD: 1, EUR: 1.1, GBP: 1.3 } # 1 unit = N of `currency`
+  hours:
+    must_finish_by: '19:00' # in user.timezone
+    drop_partial_overlap: false
+    drop_patterns: ['on[- ]?call', 'night shifts?']
+    flag_patterns: ['overlap']
+
+# ------------------------------------------------------------------ scoring (planned)
+scoring:
+  enabled: false
+  model: claude-sonnet-5-5
+  daily_budget_usd: 1
+  priorities:
+    - { label: P1, definition: 'Best fit: primary stack, fully remote' }
+    - { label: P2, definition: 'Good fit: adjacent stack or mixed role' }
+    - { label: P3, definition: 'Acceptable: worth a look' }
+
+# ------------------------------------------------------------------ telegram
+telegram:
+  allowed_chat_ids: [] # leave empty on first start; /start replies with your chat ID
+  rate_limit: { messages_per_minute: 20 }
+  batch_threshold: 5 # more than N waiting jobs -> one digest message
+  snooze_hours: [4, 24, 72]
+  reject_reasons: [Location, Pay, Hours, Stack, Level, 'Not interested']
+  digest: { enabled: false, time: '09:00' }
+
+# ------------------------------------------------------------------ tracker
+tracker:
+  type: postgres # postgres | notion (planned)
+  liveness_check: true
+
+application:
+  profile_file: profile.md
+  language: en
+  cover_letter_max_words: 180
+  style_rules: []
