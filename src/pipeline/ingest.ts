@@ -160,7 +160,13 @@ export async function ingestJob(db: Db, job: Job, options: IngestOptions): Promi
       await tx
         .insert(deliveries)
         .values(
-          config.telegram.allowed_chat_ids.map((chatId) => ({ jobId, chatId, createdAt: now })),
+          config.telegram.allowed_chat_ids.map((chatId) => ({
+            jobId,
+            chatId,
+            // with scoring on, the scorer releases the job for sending once it has a score
+            status: config.scoring.enabled ? 'scoring' : 'pending',
+            createdAt: now,
+          })),
         )
         .onConflictDoNothing();
     }

@@ -1,11 +1,51 @@
 import { loadWorkerEnv } from '../config/env.js';
 import { ConfigError, loadConfig } from '../config/load.js';
+import type { Config } from '../config/schema.js';
+import type { Db } from '../db/client.js';
+import type { Logger } from '../logger.js';
 import { createDb } from '../db/client.js';
 import { HttpClient } from '../http/client.js';
 import { createLogger } from '../logger.js';
 import { buildSources } from '../sources/registry.js';
 import { userAgent } from '../version.js';
+import { AnthropicLlm } from '../llm/client.js';
+import { pricingFor } from '../llm/pricing.js';
+import { loadProfile } from '../scoring/profile.js';
+import { Scorer } from '../scoring/scorer.js';
 import { Scheduler } from './scheduler.js';
+
+function createScorer(
+  config: Config,
+  db: Db,
+  apiKey: string | undefined,
+  logger: Logger,
+): Scorer | undefined {
+  if (!config.scoring.enabled) return undefined;
+  const pricing = pricingFor(config.scoring.model, config.scoring.pricing);
+  if (!pricing) {
+    throw new ConfigError(
+      `No built-in prices for model "${config.scoring.model}". Set scoring.pricing so the daily budget can be enforced.`,
+    );
+  }
+  const profile = loadProfile(config.application.profile_file);
+  const llm = new AnthropicLlm({
+    model: config.scoring.model,
+    effort: config.scoring.effort,
+    apiKey,
+  });
+  logger.info(
+    { model: config.scoring.model, budgetUsd: config.scoring.daily_budget_usd },
+    'LLM scoring on',
+  );
+  return new Scorer({
+    db,
+    config,
+    llm,
+    pricing,
+    profile,
+    logger: logger.child({ component: 'scorer' }),
+  });
+}
 
 function main(): void {
   const config = loadConfig();
@@ -28,6 +68,9 @@ function main(): void {
     userAgent: userAgent(config.app.user_agent_contact),
     logger: logger.child({ component: 'http' }),
   });
+  const scorer = createScorer(config, db, env.ANTHROPIC_API_KEY, logger);
+  const scoringTimer = scorer ? setInterval(() => void scorer.process(), 5_000) : undefined;
+
   const scheduler = new Scheduler(
     sources,
     { db, config, http, logger },
@@ -41,6 +84,7 @@ function main(): void {
     if (stopping) return;
     stopping = true;
     logger.info({ signal }, 'shutting down');
+    if (scoringTimer) clearInterval(scoringTimer);
     void scheduler
       .stop()
       .then(close)
