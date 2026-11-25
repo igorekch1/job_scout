@@ -1,0 +1,48 @@
+{
+  "jobs": [
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/acmerobotics/jobs/4000001",
+      "internal_job_id": 3000001,
+      "location": { "name": "Remote - Europe" },
+      "metadata": [],
+      "id": 4000001,
+      "updated_at": "2026-03-02T09:15:00-05:00",
+      "requisition_id": "REQ-1",
+      "title": "Senior Frontend Engineer",
+      "company_name": "Acme Robotics",
+      "first_published": "2026-03-01T10:00:00-05:00",
+      "language": "en",
+      "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Acme Robotics builds warehouse robots.&lt;/p&gt;&lt;/div&gt;&lt;h2&gt;What you will do&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Build React and TypeScript interfaces&lt;/li&gt;&lt;li&gt;Work with our Node.js services&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Core hours are 9:00-17:00 CET.&lt;/p&gt;",
+      "departments": [{ "id": 1, "name": "Engineering", "child_ids": [], "parent_id": null }],
+      "offices": [{ "id": 2, "name": "Europe", "location": null, "child_ids": [], "parent_id": null }],
+      "pay_input_ranges": [
+        {
+          "min_cents": 9000000,
+          "max_cents": 12000000,
+          "currency_type": "EUR",
+          "title": "Europe salary range",
+          "blurb": null
+        }
+      ]
+    },
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/acmerobotics/jobs/4000002",
+      "internal_job_id": 3000002,
+      "location": { "name": "Austin, Texas" },
+      "metadata": [],
+      "id": 4000002,
+      "updated_at": "2026-03-03T12:00:00-05:00",
+      "requisition_id": "REQ-2",
+      "title": "Staff Backend Engineer (Java)",
+      "company_name": "Acme Robotics",
+      "first_published": null,
+      "language": "en",
+      "content": "&lt;p&gt;On-site role in our Austin office. You must be authorized to work in the United States.&lt;/p&gt;",
+      "departments": [],
+      "offices": [],
+      "pay_input_ranges": []
+    },
+    { "id": "not-a-number", "title": 42 }
+  ],
+  "meta": { "total": 3 }
+}

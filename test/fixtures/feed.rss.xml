@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Example Board: frontend jobs</title>
+    <link>https://jobs.example.com/</link>
+    <description>Saved search feed</description>
+    <item>
+      <title>Senior Frontend Engineer at Acme Robotics</title>
+      <link>https://jobs.example.com/jobs/1001?utm_source=rss&amp;utm_medium=feed</link>
+      <guid isPermaLink="false">example-1001</guid>
+      <pubDate>Mon, 02 Mar 2026 08:30:00 +0000</pubDate>
+      <dc:creator>Example Board</dc:creator>
+      <description><![CDATA[<p>Remote (Europe). React, TypeScript.</p><p>Salary: $7,000 - $9,000 per month.</p>]]></description>
+    </item>
+    <item>
+      <title>React Developer &amp; Team Lead at Globex</title>
+      <link>https://jobs.example.com/jobs/1002</link>
+      <guid>https://jobs.example.com/jobs/1002</guid>
+      <pubDate>Tue, 03 Mar 2026 11:00:00 +0000</pubDate>
+      <content:encoded><![CDATA[<p>Full description with <b>markup</b>.</p>]]></content:encoded>
+      <description>Short summary</description>
+      <location>Remote, Worldwide</location>
+    </item>
+    <item>
+      <title>Item without a link</title>
+      <description>Should be skipped.</description>
+    </item>
+  </channel>
+</rss>

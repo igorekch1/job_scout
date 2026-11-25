@@ -1,0 +1,170 @@
+import { InlineKeyboard } from 'grammy';
+import type { Config } from '../config/schema.js';
+import type { JobLinkRow, JobRow } from '../db/schema.js';
+import { FLAGS } from '../filters/types.js';
+import type { Salary, SalaryPeriod } from '../normalize/job.js';
+import { formatSalary } from '../normalize/salary.js';
+import { truncate } from '../util/text.js';
+
+export const escapeHtml = (text: string): string =>
+  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const EMPLOYMENT_LABEL: Readonly<Record<string, string>> = {
+  full_time: 'Full-time',
+  part_time: 'Part-time',
+  contract: 'Contract',
+  internship: 'Internship',
+};
+
+const WORK_MODE_LABEL: Readonly<Record<string, string>> = {
+  remote: 'Remote',
+  hybrid: 'Hybrid',
+  onsite: 'On-site',
+};
+
+export function salaryOfRow(job: JobRow): Salary | null {
+  if (job.salaryMin === null && job.salaryMax === null) return null;
+  return {
+    min: job.salaryMin,
+    max: job.salaryMax,
+    currency: job.salaryCurrency,
+    period: job.salaryPeriod as SalaryPeriod | null,
+    periodInferred: false,
+    text: job.salaryText ?? '',
+  };
+}
+
+export function locationLine(job: JobRow): string {
+  const mode = job.workMode ? WORK_MODE_LABEL[job.workMode] : undefined;
+  const text = job.locationText?.trim();
+  if (mode && text && !text.toLowerCase().includes(mode.toLowerCase())) return `${mode} · ${text}`;
+  return text || mode || 'Location not stated';
+}
+
+export function formatDate(date: Date, timeZone: string, withTime = false): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    day: 'numeric',
+    month: 'short',
+    ...(withTime ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' } : {}),
+  }).format(date);
+}
+
+/** Display name of a link: the board or feed it came from. */
+const linkLabel = (link: Pick<JobLinkRow, 'sourceType' | 'sourceId'>): string =>
+  link.sourceType === 'rss' ? link.sourceId.replace(/^rss:/, '') : link.sourceType;
+
+export interface CardData {
+  job: JobRow;
+  links: readonly JobLinkRow[];
+}
+
+/** Card body in Telegram HTML. `status` is appended once the user has acted on the job. */
+export function renderCard({ job, links }: CardData, config: Config, status?: string): string {
+  const lines: string[] = [`<b>${escapeHtml(truncate(job.title, 200))}</b>`];
+  if (job.company) lines.push(escapeHtml(truncate(job.company, 100)));
+  lines.push('');
+
+  lines.push(`💰 ${escapeHtml(formatSalary(salaryOfRow(job)) ?? 'Pay not stated')}`);
+  lines.push(`📍 ${escapeHtml(truncate(locationLine(job), 200))}`);
+
+  const facts: string[] = [];
+  if (job.employmentType) facts.push(EMPLOYMENT_LABEL[job.employmentType] ?? job.employmentType);
+  facts.push(
+    job.postedAt
+      ? `posted ${formatDate(job.postedAt, config.user.timezone)}`
+      : `found ${formatDate(job.firstSeenAt, config.user.timezone)}`,
+  );
+  lines.push(`🗓 ${escapeHtml(facts.join(' · '))}`);
+
+  const remarks = job.flags
+    .filter((code) => code !== 'pay_unstated' && code !== 'location_unstated')
+    .map((code) => (FLAGS as Record<string, string>)[code] ?? code);
+  if (remarks.length > 0) lines.push(`⚠️ ${escapeHtml(remarks.join('; '))}`);
+
+  const ordered = [...links].sort(
+    (a, b) => Number(b.url === job.primaryUrl) - Number(a.url === job.primaryUrl),
+  );
+  const seen = new Set<string>();
+  const anchors = ordered
+    .filter((link) => !seen.has(link.canonicalUrl) && seen.add(link.canonicalUrl))
+    .slice(0, 5)
+    .map((link) => `<a href="${escapeHtml(link.url)}">${escapeHtml(linkLabel(link))}</a>`);
+  if (anchors.length === 0) {
+    anchors.push(
+      `<a href="${escapeHtml(job.primaryUrl)}">${escapeHtml(job.primarySourceType)}</a>`,
+    );
+  }
+  lines.push(`🔗 ${anchors.join(' · ')}`);
+
+  if (status) lines.push('', status);
+  return lines.join('\n');
+}
+
+/* Callback data stays far below Telegram's 64-byte limit: an action code and the job id. */
+export const CALLBACK = {
+  track: (jobId: number) => `t:${jobId}`,
+  trackAnyway: (jobId: number) => `ta:${jobId}`,
+  reject: (jobId: number) => `r:${jobId}`,
+  rejectReason: (jobId: number, index: number) => `rr:${jobId}:${index}`,
+  snooze: (jobId: number) => `s:${jobId}`,
+  snoozeFor: (jobId: number, hours: number) => `ss:${jobId}:${hours}`,
+  back: (jobId: number) => `b:${jobId}`,
+} as const;
+
+export function mainKeyboard(jobId: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('✅ Add to tracker', CALLBACK.track(jobId))
+    .text('❌ Reject', CALLBACK.reject(jobId))
+    .row()
+    .text('💤 Later', CALLBACK.snooze(jobId));
+}
+
+export function rejectKeyboard(jobId: number, reasons: readonly string[]): InlineKeyboard {
+  const keyboard = new InlineKeyboard();
+  reasons.forEach((reason, index) => {
+    keyboard.text(reason, CALLBACK.rejectReason(jobId, index));
+    if (index % 2 === 1) keyboard.row();
+  });
+  return keyboard.row().text('« Back', CALLBACK.back(jobId));
+}
+
+const hoursLabel = (hours: number): string => (hours % 24 === 0 ? `${hours / 24} d` : `${hours} h`);
+
+export function snoozeKeyboard(jobId: number, hours: readonly number[]): InlineKeyboard {
+  const keyboard = new InlineKeyboard();
+  for (const value of hours) keyboard.text(hoursLabel(value), CALLBACK.snoozeFor(jobId, value));
+  return keyboard.row().text('« Back', CALLBACK.back(jobId));
+}
+
+export function unknownLivenessKeyboard(jobId: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('Add anyway', CALLBACK.trackAnyway(jobId))
+    .text('« Back', CALLBACK.back(jobId));
+}
+
+const TELEGRAM_LIMIT = 4096;
+
+/**
+ * One message listing many jobs, used when more than `batch_threshold` are waiting.
+ * Each line ends with a /job_<id> command that opens the full card with its buttons.
+ * Returns several messages when the list does not fit into one.
+ */
+export function renderDigest(jobs: readonly JobRow[], title: string): string[] {
+  const messages: string[] = [];
+  let current = `<b>${escapeHtml(title)}</b>\n`;
+
+  jobs.forEach((job, index) => {
+    const parts = [job.company, formatSalary(salaryOfRow(job)), locationLine(job)]
+      .filter((part): part is string => Boolean(part))
+      .map((part) => escapeHtml(truncate(part, 60)));
+    const line = `\n${index + 1}. <b>${escapeHtml(truncate(job.title, 90))}</b>\n${parts.join(' · ')}\n/job_${job.id}\n`;
+    if (current.length + line.length > TELEGRAM_LIMIT) {
+      messages.push(current);
+      current = '';
+    }
+    current += line;
+  });
+  messages.push(current);
+  return messages;
+}

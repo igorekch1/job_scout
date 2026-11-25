@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Example Careers</title>
+  <id>https://careers.example.org/feed</id>
+  <updated>2026-03-04T10:00:00Z</updated>
+  <entry>
+    <title>Lead Full Stack Engineer</title>
+    <link rel="self" href="https://careers.example.org/api/jobs/77"/>
+    <link rel="alternate" type="text/html" href="https://careers.example.org/jobs/77"/>
+    <id>urn:example:job:77</id>
+    <published>2026-03-04T09:00:00Z</published>
+    <updated>2026-03-04T10:00:00Z</updated>
+    <author><name>Northwind Labs</name></author>
+    <summary type="html">&lt;p&gt;Hybrid role in Berlin, Germany.&lt;/p&gt;</summary>
+  </entry>
+</feed>

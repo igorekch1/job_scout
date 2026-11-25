@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+.git
+.github
+.env
+.env.*
+config.yaml
+profile.md
+*.session
+*.bak
+test
+docs

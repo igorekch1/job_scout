@@ -1,0 +1,9 @@
+dist/
+coverage/
+drizzle/
+node_modules/
+pnpm-lock.yaml
+test/fixtures/
+config.yaml
+profile.md
+docs/config-reference.md
