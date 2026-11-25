@@ -54,10 +54,11 @@ const checkAshby = (get: Get, board: string, jobId: string): Promise<Liveness> =
       : { status: 'closed', detail: 'no longer listed on the Ashby board' };
   });
 
-const checkPage = (get: Get, url: string): Promise<Liveness> =>
+const checkPage = (get: Get, url: string, extra: readonly RegExp[]): Promise<Liveness> =>
   probe(async () => {
     const response = await get(url, { accept: 'text/html, */*;q=0.5' });
-    return CLOSED_TEXT.test(response.body.slice(0, 200_000))
+    const body = response.body.slice(0, 200_000);
+    return [CLOSED_TEXT, ...extra].some((pattern) => pattern.test(body))
       ? { status: 'closed', detail: 'the page says the posting is closed' }
       : { status: 'open', detail: 'the page is reachable' };
   });
@@ -73,7 +74,16 @@ function greenhouseFromUrl(url: string): { board: string; jobId: string } | null
  * job is known there, otherwise fetches the primary page. "unknown" means the check itself
  * failed (network error, rate limit): the caller decides what to do.
  */
-export async function checkLiveness(target: LivenessTarget, http: HttpClient): Promise<Liveness> {
+export interface LivenessOptions {
+  /** Extra regular expressions that mark a page as closed (`tracker.closed_patterns`). */
+  closedPatterns?: readonly string[];
+}
+
+export async function checkLiveness(
+  target: LivenessTarget,
+  http: HttpClient,
+  options: LivenessOptions = {},
+): Promise<Liveness> {
   const get: Get = (url, options) => http.get(url, options);
   const slugOf = (sourceId: string): string => sourceId.slice(sourceId.indexOf(':') + 1);
 
@@ -87,5 +97,6 @@ export async function checkLiveness(target: LivenessTarget, http: HttpClient): P
     const viaUrl = greenhouseFromUrl(url);
     if (viaUrl) return checkGreenhouse(get, viaUrl.board, viaUrl.jobId);
   }
-  return checkPage(get, target.primaryUrl);
+  const extra = (options.closedPatterns ?? []).map((source) => new RegExp(source, 'iu'));
+  return checkPage(get, target.primaryUrl, extra);
 }

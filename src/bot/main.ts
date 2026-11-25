@@ -19,11 +19,18 @@ async function main(): Promise<void> {
     maxRetries: 1,
     logger: logger.child({ component: 'http' }),
   });
+  const tracker = createTracker(config, db, { notionToken: env.NOTION_TOKEN });
+  const health = await tracker.health?.();
+  if (health && !health.ok) {
+    logger.error({ tracker: tracker.id, problem: health.detail }, 'tracker check failed');
+  } else if (health) {
+    logger.info({ tracker: tracker.id }, health.detail);
+  }
   const bot = createBot({
     token: env.TELEGRAM_BOT_TOKEN,
     db,
     config,
-    tracker: createTracker(config, db),
+    tracker,
     http,
     logger,
   });

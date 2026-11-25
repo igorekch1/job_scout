@@ -110,8 +110,26 @@ telegram:
 
 # ------------------------------------------------------------------ tracker
 tracker:
-  type: postgres # postgres | notion (planned)
+  type: postgres # postgres | notion
   liveness_check: true
+  closed_patterns: [] # extra wording that marks a posting page as closed
+  # notion:                              # used when type is notion; needs NOTION_TOKEN in .env
+  #   data_source_id: '00000000-0000-0000-0000-000000000000'
+  #   properties:                         # job field -> your property name; types are read from Notion
+  #     company: Company
+  #     title: Position
+  #     url: Link
+  #     salary: Salary
+  #     work_format: 'Work format'
+  #     source: Source
+  #     status: Status
+  #     posted_at: Posted
+  #     added_at: Added
+  #   values:
+  #     work_format: { remote: Remote, hybrid: Hybrid, onsite: Office }
+  #     source: { greenhouse: 'Company website', ashby: 'Company website', 'rss:example-*': 'Example Board' }
+  #   defaults: { status: 'To Apply' }
+  #   auto_number: { property: '#' }    # optional running number
 
 application:
   profile_file: profile.md

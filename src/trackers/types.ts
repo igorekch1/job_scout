@@ -9,12 +9,16 @@ export interface TrackerEntry {
   links: string[];
   /** Source type of the primary link, e.g. "greenhouse". */
   source: string;
+  /** Source instance of the primary link, e.g. "rss:my-feed". */
+  sourceId: string;
   /** Human-readable pay, e.g. "$120k–150k / year". */
   salary: string | null;
   location: string | null;
   workMode: string | null;
   employmentType: string | null;
   priority: string | null;
+  /** Industry label, when known. */
+  industry?: string | null;
   postedAt: Date | null;
   addedAt: Date;
 }
@@ -26,6 +30,13 @@ export interface TrackerResult {
   url?: string;
   /** True when the job was already there and nothing was written. */
   duplicate: boolean;
+  /** Fields that could not be written, with the reason. Shown on the card. */
+  skipped?: string[];
+}
+
+export interface TrackerHealth {
+  ok: boolean;
+  detail: string;
 }
 
 /**
@@ -36,4 +47,6 @@ export interface Tracker {
   readonly id: string;
   /** Must be idempotent per `entry.jobId`. Throw on failure; the bot reports the message. */
   add(entry: TrackerEntry): Promise<TrackerResult>;
+  /** Optional self-check, shown in /status and logged at startup. */
+  health?(): Promise<TrackerHealth>;
 }

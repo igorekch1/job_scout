@@ -501,41 +501,96 @@ const telegramSchema = z
 
 /* ------------------------------------------------------------------ tracker */
 
+/** Job fields the Notion adapter can write. */
+export const NOTION_FIELDS = [
+  'company',
+  'title',
+  'url',
+  'links',
+  'salary',
+  'location',
+  'work_format',
+  'employment',
+  'source',
+  'priority',
+  'status',
+  'industry',
+  'posted_at',
+  'added_at',
+] as const;
+
+export type NotionField = (typeof NOTION_FIELDS)[number];
+
+const notionField = z.enum(NOTION_FIELDS);
+
 const notionSchema = z
   .strictObject({
-    data_source_id: z.string().trim().min(1).describe('Notion data source (database) ID.'),
+    data_source_id: z
+      .string()
+      .trim()
+      .min(1)
+      .describe(
+        'ID of the Notion data source to write to. In Notion: database menu → "Manage data sources" → copy the data source ID.',
+      ),
+    api_version: z
+      .string()
+      .trim()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'expected a date such as "2026-03-11"')
+      .default('2026-03-11')
+      .describe('Notion-Version header sent with every request.'),
     properties: z
-      .record(z.string(), z.string().trim().min(1))
+      .partialRecord(notionField, z.string().trim().min(1))
       .default({})
-      .describe('Job field -> your Notion property name. Property types are read from Notion.'),
+      .describe(
+        `Job field -> your Notion property name. Fields: ${NOTION_FIELDS.join(', ')}. Property types are read from Notion, so any title, text, URL, select, multi-select, status, date or number property works. Unmapped fields are not written.`,
+      ),
     values: z
-      .record(z.string(), z.record(z.string(), z.string()))
+      .partialRecord(notionField, z.record(z.string(), z.string().trim().min(1)))
       .default({})
-      .describe('Per-field value mapping, e.g. work_format: { remote: Remote }.'),
+      .describe(
+        'Per-field value mapping, e.g. work_format: { remote: Remote, onsite: Office }. For `source` the keys are source ids or types and may end with "*", e.g. { "rss:board-*": Board, greenhouse: "Company website" }.',
+      ),
     defaults: z
-      .record(z.string(), z.string())
+      .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
       .default({})
-      .describe('Static values written on insert, e.g. status: "To Apply".'),
+      .describe(
+        'Values written on every insert, keyed by a job field from `properties` or by a Notion property name, e.g. status: "To Apply".',
+      ),
+    create_select_options: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Let Notion create a missing select option. When false, a value that is not an existing option is skipped and reported on the card.',
+      ),
     auto_number: z
       .strictObject({
-        property: z.string().trim().describe('Number property that receives a running number.'),
+        property: z
+          .string()
+          .trim()
+          .min(1)
+          .describe('Number property that receives a running number.'),
         strategy: z.enum(['max_plus_one']).default('max_plus_one'),
       })
       .optional()
-      .describe('Optional running number for new rows.'),
+      .describe('Optional running number for new rows: the current maximum plus one.'),
   })
-  .describe('Notion adapter settings (requires NOTION_TOKEN). Not implemented yet.');
+  .describe('Notion adapter settings (requires NOTION_TOKEN).');
 
 const trackerSchema = z
   .strictObject({
     type: z
       .enum(['postgres', 'notion'])
       .default('postgres')
-      .describe('Where "Add to tracker" writes. "postgres" is built in and needs no setup.'),
+      .describe(
+        'Where "Add to tracker" writes. "postgres" is built in and needs no setup. Tracked jobs are always also recorded locally.',
+      ),
     liveness_check: z
       .boolean()
       .default(true)
       .describe('Re-check that a posting is still open before adding it to the tracker.'),
+    closed_patterns: regexList(
+      'Extra regular expressions (case-insensitive) that mark a posting page as closed, for boards whose wording the built-in English patterns miss.',
+    ),
     notion: notionSchema.optional(),
   })
   .describe('Application tracker.');

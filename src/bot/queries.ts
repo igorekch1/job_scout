@@ -1,6 +1,7 @@
 import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { deliveries, feedback, jobLinks, jobs, trackerEntries } from '../db/schema.js';
+import type { TrackerEntry, TrackerResult } from '../trackers/types.js';
 import type { CardData } from './cards.js';
 
 export async function loadCard(db: Db, jobId: number): Promise<CardData | undefined> {
@@ -104,4 +105,31 @@ export async function loadCounts(db: Db): Promise<Counts> {
     tracked: tracked?.value ?? 0,
     waiting: waiting?.value ?? 0,
   };
+}
+
+/** Keeps a local record of a job sent to an external tracker, for counts and history. */
+export async function recordExternal(
+  db: Db,
+  entry: TrackerEntry,
+  trackerId: string,
+  result: TrackerResult,
+): Promise<void> {
+  await db
+    .insert(trackerEntries)
+    .values({
+      jobId: entry.jobId,
+      company: entry.company,
+      title: entry.title,
+      url: entry.url,
+      priority: entry.priority,
+      source: entry.source,
+      salary: entry.salary,
+      location: entry.location,
+      postedAt: entry.postedAt,
+      addedAt: entry.addedAt,
+      tracker: trackerId,
+      externalRef: result.ref,
+      externalUrl: result.url ?? null,
+    })
+    .onConflictDoNothing({ target: trackerEntries.jobId });
 }

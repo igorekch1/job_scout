@@ -115,7 +115,7 @@ function render(): string {
     '| `CONFIG_PATH` | no | Path to the config file. Defaults to `config.yaml`. |',
     '| `LOG_LEVEL` | no | Overrides `app.log_level`. |',
     '| `ANTHROPIC_API_KEY` | no | LLM scoring and application drafts (planned). |',
-    '| `NOTION_TOKEN` | no | Notion tracker (planned). |',
+    '| `NOTION_TOKEN` | with Notion | Secret of your Notion integration. |',
     '| `TG_API_ID`, `TG_API_HASH`, `TG_SESSION` | no | Telegram channel reader (planned). |',
     '',
   );

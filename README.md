@@ -5,9 +5,9 @@ sends each match to you as a card you can act on in one tap.
 
 The goal is speed: a matching job should reach you within minutes of being published.
 
-> **Status:** MVP. Working today: RSS/Atom, Greenhouse and Ashby sources, the rule filter,
-> deduplication, Telegram cards with _Add to tracker_, _Reject_ and _Later_, and the built-in
-> Postgres tracker. See the [roadmap](#roadmap) for what comes next.
+> **Status:** working today: RSS/Atom, Greenhouse and Ashby sources, the rule filter,
+> deduplication, Telegram cards with _Add to tracker_, _Reject_ and _Later_, the built-in Postgres
+> tracker and the Notion tracker. See the [roadmap](#roadmap) for what comes next.
 
 ## What it does
 
@@ -89,6 +89,34 @@ telegram:
 
 The bot only answers chats on this list. Everyone else gets a "this bot is private" reply to `/start`
 and silence otherwise.
+
+## Notion tracker
+
+By default _Add to tracker_ writes to a table in your own Postgres. To write to a Notion database
+instead:
+
+1. Create an integration at [notion.so/profile/integrations](https://www.notion.so/profile/integrations)
+   with the _Read content_ and _Insert content_ capabilities, and copy its secret into `.env` as
+   `NOTION_TOKEN`.
+2. Open your database in Notion, choose **⋯ → Connections** and add the integration.
+3. Copy the data source ID: database menu → **Manage data sources** → **Copy data source ID**.
+4. Set `tracker.type: notion` and fill `tracker.notion` (see the commented block in
+   `config.example.yaml`):
+   - `properties` maps job fields to your property names. The adapter reads each property's type
+     from Notion, so title, text, URL, select, multi-select, status, date, number and checkbox
+     properties all work. Fields: `company`, `title`, `url`, `links`, `salary`, `location`,
+     `work_format`, `employment`, `source`, `priority`, `status`, `industry`, `posted_at`,
+     `added_at`.
+   - `values` translates job values into your option names, for example
+     `work_format: { remote: Remote, onsite: Office }`. For `source`, keys are source ids or types
+     and may end with `*`: `{ 'rss:my-board-*': 'My Board', greenhouse: 'Company website' }`.
+   - `defaults` sets fixed values on every new row, such as `status: 'To Apply'`.
+   - `auto_number` fills a number property with the current maximum plus one.
+
+The bot checks the mapping against the live database at startup and in `/status`. Before creating a
+page it looks for an existing page with the same link, so tapping twice never makes two rows. A
+value that is not an existing select option is skipped and listed on the card, unless
+`create_select_options` is on. Properties you do not map are never written.
 
 ## Commands
 
@@ -178,7 +206,7 @@ src/
   filters/     rule filter with reason codes
   pipeline/    fetch -> normalize -> dedup -> filter -> queue
   worker/      scheduler and worker entrypoint
-  trackers/    tracker interface and the Postgres tracker
+  trackers/    tracker interface, Postgres and Notion trackers
   liveness/    "is this posting still open?" checks
   bot/         cards, buttons, commands, outbox
 drizzle/       SQL migrations
@@ -217,13 +245,12 @@ full access to the account.
 
 ## Roadmap
 
-1. Notion tracker with a configurable property mapping.
-2. Optional LLM scoring: priority bucket, fit score, one-line reason, red flags, daily spend cap.
-3. _Prepare application_: answers to the posting's questions and a short cover letter from your
+1. Optional LLM scoring: priority bucket, fit score, one-line reason, red flags, daily spend cap.
+2. _Prepare application_: answers to the posting's questions and a short cover letter from your
    `profile.md`, never inventing facts.
-4. More sources: Lever, Himalayas, Remotive, RemoteOK, Jobicy.
-5. Telegram channel reader through your own account.
-6. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
+3. More sources: Lever, Himalayas, Remotive, RemoteOK, Jobicy.
+4. Telegram channel reader through your own account.
+5. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
 
 ## License
 
