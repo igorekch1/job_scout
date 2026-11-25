@@ -65,7 +65,9 @@ const SOURCE_NAMES: Readonly<Record<string, string>> = {
 const linkLabel = (link: Pick<JobLinkRow, 'sourceType' | 'sourceId'>): string =>
   link.sourceType === 'rss'
     ? link.sourceId.replace(/^rss:/, '')
-    : (SOURCE_NAMES[link.sourceType] ?? link.sourceType);
+    : link.sourceType === 'telegram'
+      ? `@${link.sourceId.replace(/^telegram:/, '')}`
+      : (SOURCE_NAMES[link.sourceType] ?? link.sourceType);
 
 export interface CardData {
   job: JobRow;
