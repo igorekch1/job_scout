@@ -255,10 +255,19 @@ const telegramChannelsSchema = z
   .strictObject({
     enabled: enabled(false),
     interval_minutes: intervalMinutes,
-    channels: keywordList('Public channel usernames to read, without the leading "@".'),
+    channels: keywordList(
+      'Public channel usernames to read, with or without "@" (e.g. "example_jobs"). Private channels work only if your account is a member.',
+    ),
+    posts_per_run: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(30)
+      .describe('How many of the newest posts to read per channel and run.'),
   })
   .describe(
-    'Reads posts from Telegram channels through YOUR OWN account (TG_API_ID, TG_API_HASH, TG_SESSION). Disabled by default. Not implemented yet.',
+    'Reads posts from Telegram channels through YOUR OWN account (TG_API_ID, TG_API_HASH, TG_SESSION; see README). Read-only. Disabled by default.',
   );
 
 const sourcesSchema = z

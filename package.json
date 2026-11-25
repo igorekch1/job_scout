@@ -23,7 +23,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "config:check": "tsx scripts/check-config.ts",
     "docs:config": "tsx scripts/gen-config-docs.ts",
-    "docs:config:check": "tsx scripts/gen-config-docs.ts --check"
+    "docs:config:check": "tsx scripts/gen-config-docs.ts --check",
+    "tg:login": "tsx src/tools/telegram-login.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.14.0",
@@ -33,6 +34,7 @@
     "html-to-text": "^10.0.1",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
+    "telegram": "^2.26.22",
     "yaml": "^2.9.1",
     "zod": "^4.6.7"
   },

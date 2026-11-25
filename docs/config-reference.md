@@ -83,10 +83,11 @@ Where jobs come from. Every source is optional and off by default.
 | `sources.jobicy.tags` | list of string | `[]` | Keep only jobs whose title, industry or description mention one of these. Applied locally, so each run costs one request. Empty keeps all. |
 | `sources.jobicy.geo` | string |  | Jobicy region slug, e.g. "europe" or "anywhere". |
 | `sources.jobicy.industry` | string |  | Jobicy industry slug, e.g. "engineering". |
-| `sources.telegram_channels` | object |  | Reads posts from Telegram channels through YOUR OWN account (TG_API_ID, TG_API_HASH, TG_SESSION). Disabled by default. Not implemented yet. |
+| `sources.telegram_channels` | object |  | Reads posts from Telegram channels through YOUR OWN account (TG_API_ID, TG_API_HASH, TG_SESSION; see README). Read-only. Disabled by default. |
 | `sources.telegram_channels.enabled` | boolean | `false` | Turn this source on or off. |
 | `sources.telegram_channels.interval_minutes` | integer |  | Polling interval for this source. Falls back to schedule.default_interval_minutes. |
-| `sources.telegram_channels.channels` | list of string | `[]` | Public channel usernames to read, without the leading "@". |
+| `sources.telegram_channels.channels` | list of string | `[]` | Public channel usernames to read, with or without "@" (e.g. "example_jobs"). Private channels work only if your account is a member. |
+| `sources.telegram_channels.posts_per_run` | integer | `30` | How many of the newest posts to read per channel and run. |
 
 ## `dedup`
 
@@ -227,4 +228,4 @@ Application tracker.
 | `LOG_LEVEL` | no | Overrides `app.log_level`. |
 | `ANTHROPIC_API_KEY` | with scoring | Anthropic API key for LLM scoring and application drafts. |
 | `NOTION_TOKEN` | with Notion | Secret of your Notion integration. |
-| `TG_API_ID`, `TG_API_HASH`, `TG_SESSION` | no | Telegram channel reader (planned). |
+| `TG_API_ID`, `TG_API_HASH`, `TG_SESSION` | with Telegram channels | App credentials from my.telegram.org and the session string from `pnpm tg:login`. |
