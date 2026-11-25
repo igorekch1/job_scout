@@ -6,6 +6,7 @@ import { deliveries, jobLinks, jobs, type JobLinkRow } from '../db/schema.js';
 import { isPaused } from '../db/stores.js';
 import { errorMessage, type Logger } from '../logger.js';
 import { truncate } from '../util/text.js';
+import { loadScores } from '../scoring/scorer.js';
 import { mainKeyboard, renderCard, renderDigest } from './cards.js';
 
 export interface OutboxDeps {
@@ -127,13 +128,20 @@ export class Outbox {
       .orderBy(asc(deliveries.id))
       .limit(PAGE);
     if (rows.length === 0) return;
+    const scores = await loadScores(
+      db,
+      rows.map((row) => row.job.id),
+    );
 
     if (rows.length > config.telegram.batch_threshold) {
       try {
         const title = `${rows.length} new matching jobs`;
+        const order = config.scoring.priorities.map((priority) => priority.label);
         for (const message of renderDigest(
           rows.map((row) => row.job),
           title,
+          scores,
+          order,
         )) {
           await this.send(chatId, message);
         }
@@ -171,7 +179,10 @@ export class Outbox {
 
     for (const { delivery, job } of rows) {
       try {
-        const text = renderCard({ job, links: linksByJob.get(job.id) ?? [] }, config);
+        const text = renderCard(
+          { job, links: linksByJob.get(job.id) ?? [], score: scores.get(job.id) ?? null },
+          config,
+        );
         const message = await this.send(chatId, text, mainKeyboard(job.id));
         await db
           .update(deliveries)

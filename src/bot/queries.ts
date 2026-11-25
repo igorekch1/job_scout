@@ -1,6 +1,6 @@
 import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { deliveries, feedback, jobLinks, jobs, trackerEntries } from '../db/schema.js';
+import { deliveries, feedback, jobLinks, jobs, llmScores, trackerEntries } from '../db/schema.js';
 import type { TrackerEntry, TrackerResult } from '../trackers/types.js';
 import type { CardData } from './cards.js';
 
@@ -12,7 +12,8 @@ export async function loadCard(db: Db, jobId: number): Promise<CardData | undefi
     .from(jobLinks)
     .where(eq(jobLinks.jobId, jobId))
     .orderBy(jobLinks.id);
-  return { job, links };
+  const [score] = await db.select().from(llmScores).where(eq(llmScores.jobId, jobId)).limit(1);
+  return { job, links, score: score ?? null };
 }
 
 export type JobState = 'new' | 'tracked' | 'rejected' | 'closed';

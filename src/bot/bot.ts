@@ -13,6 +13,7 @@ import {
 import { describeFilters } from '../filters/index.js';
 import type { HttpClient } from '../http/client.js';
 import { checkLiveness } from '../liveness/check.js';
+import { dayIn, spentOn } from '../llm/budget.js';
 import { errorMessage, type Logger } from '../logger.js';
 import { formatSalary } from '../normalize/salary.js';
 import { buildSources } from '../sources/registry.js';
@@ -130,12 +131,20 @@ export function createBot(deps: BotDeps): Bot {
       loadCounts(db),
       tracker.health?.(),
     ]);
+    const spent = config.scoring.enabled
+      ? await spentOn(db, dayIn(at, config.user.timezone))
+      : undefined;
     const { sources, unsupported } = buildSources(config);
 
     const lines = [
       `<b>Status:</b> ${paused ? '⏸ paused' : '▶️ running'}`,
       `<b>Worker:</b> ${heartbeat ? `last seen ${ago(new Date(heartbeat), at)}` : 'not seen yet'}`,
       `<b>Jobs:</b> ${counts.found} found · ${counts.kept} kept · ${counts.dropped} dropped`,
+      ...(spent !== undefined
+        ? [
+            `<b>LLM:</b> $${spent.toFixed(2)} of $${config.scoring.daily_budget_usd.toFixed(2)} today (${escapeHtml(config.scoring.model)})`,
+          ]
+        : []),
       `<b>Tracker:</b> ${escapeHtml(tracker.id)}${health ? ` ${health.ok ? '✅' : `❌ ${escapeHtml(truncate(health.detail, 200))}`}` : ''}`,
       `<b>Yours:</b> ${counts.tracked} tracked · ${counts.rejected} rejected · ${counts.waiting} waiting`,
       '',
@@ -241,7 +250,8 @@ export function createBot(deps: BotDeps): Bot {
         location: locationLine(job),
         workMode: job.workMode,
         employmentType: job.employmentType,
-        priority: null,
+        priority: card.score?.priority ?? null,
+        industry: card.score?.industry ?? null,
         postedAt: job.postedAt,
         addedAt: at,
       };
@@ -260,7 +270,7 @@ export function createBot(deps: BotDeps): Bot {
         : '';
       await edit(
         ctx,
-        { job: { ...job, state: 'tracked' }, links },
+        { ...card, job: { ...job, state: 'tracked' } },
         `${result.duplicate ? `✅ Already in ${where}` : `✅ Added to ${where}`}${skipped}`,
       );
     } catch (error) {

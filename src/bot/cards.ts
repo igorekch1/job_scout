@@ -1,6 +1,6 @@
 import { InlineKeyboard } from 'grammy';
 import type { Config } from '../config/schema.js';
-import type { JobLinkRow, JobRow } from '../db/schema.js';
+import type { JobLinkRow, JobRow, LlmScoreRow } from '../db/schema.js';
 import { FLAGS } from '../filters/types.js';
 import type { Salary, SalaryPeriod } from '../normalize/job.js';
 import { formatSalary } from '../normalize/salary.js';
@@ -57,13 +57,37 @@ const linkLabel = (link: Pick<JobLinkRow, 'sourceType' | 'sourceId'>): string =>
 export interface CardData {
   job: JobRow;
   links: readonly JobLinkRow[];
+  score?: LlmScoreRow | null;
+}
+
+/** "P1 · 82/100" */
+export function scoreBadge(score: LlmScoreRow | null | undefined): string | null {
+  if (!score) return null;
+  const parts = [score.priority, score.fitScore !== null ? `${score.fitScore}/100` : null];
+  const text = parts.filter(Boolean).join(' · ');
+  return text || null;
 }
 
 /** Card body in Telegram HTML. `status` is appended once the user has acted on the job. */
-export function renderCard({ job, links }: CardData, config: Config, status?: string): string {
+export function renderCard(
+  { job, links, score }: CardData,
+  config: Config,
+  status?: string,
+): string {
   const lines: string[] = [`<b>${escapeHtml(truncate(job.title, 200))}</b>`];
   if (job.company) lines.push(escapeHtml(truncate(job.company, 100)));
   lines.push('');
+
+  const badge = scoreBadge(score);
+  if (score && badge) {
+    lines.push(
+      `🎯 <b>${escapeHtml(badge)}</b>${score.reason ? ` · ${escapeHtml(score.reason)}` : ''}`,
+    );
+    for (const flag of score.redFlags) {
+      lines.push(`🚩 ${escapeHtml(flag.kind)}: ${escapeHtml(flag.note)}`);
+    }
+    if (score.stack.length > 0) lines.push(`🧰 ${escapeHtml(score.stack.join(', '))}`);
+  }
 
   lines.push(`💰 ${escapeHtml(formatSalary(salaryOfRow(job)) ?? 'Pay not stated')}`);
   lines.push(`📍 ${escapeHtml(truncate(locationLine(job), 200))}`);
@@ -150,12 +174,29 @@ const TELEGRAM_LIMIT = 4096;
  * Each line ends with a /job_<id> command that opens the full card with its buttons.
  * Returns several messages when the list does not fit into one.
  */
-export function renderDigest(jobs: readonly JobRow[], title: string): string[] {
+export function renderDigest(
+  jobs: readonly JobRow[],
+  title: string,
+  scores: ReadonlyMap<number, LlmScoreRow> = new Map(),
+  priorityOrder: readonly string[] = [],
+): string[] {
+  const rank = (job: JobRow): [number, number] => {
+    const score = scores.get(job.id);
+    const index = score?.priority ? priorityOrder.indexOf(score.priority) : -1;
+    return [index === -1 ? priorityOrder.length : index, -(score?.fitScore ?? -1)];
+  };
+  const ordered = [...jobs].sort((a, b) => {
+    const [pa, sa] = rank(a);
+    const [pb, sb] = rank(b);
+    return pa - pb || sa - sb;
+  });
+
   const messages: string[] = [];
   let current = `<b>${escapeHtml(title)}</b>\n`;
 
-  jobs.forEach((job, index) => {
-    const parts = [job.company, formatSalary(salaryOfRow(job)), locationLine(job)]
+  ordered.forEach((job, index) => {
+    const badge = scoreBadge(scores.get(job.id));
+    const parts = [badge, job.company, formatSalary(salaryOfRow(job)), locationLine(job)]
       .filter((part): part is string => Boolean(part))
       .map((part) => escapeHtml(truncate(part, 60)));
     const line = `\n${index + 1}. <b>${escapeHtml(truncate(job.title, 90))}</b>\n${parts.join(' · ')}\n/job_${job.id}\n`;
