@@ -1,0 +1,33 @@
+[
+  {
+    "id": "aaaaaaaa-0000-4000-8000-000000000001",
+    "text": "Senior Frontend Engineer",
+    "hostedUrl": "https://jobs.lever.co/globex/aaaaaaaa-0000-4000-8000-000000000001",
+    "applyUrl": "https://jobs.lever.co/globex/aaaaaaaa-0000-4000-8000-000000000001/apply",
+    "createdAt": 1772712000000,
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Engineering",
+      "location": "Remote - Europe",
+      "team": "Web",
+      "allLocations": ["Remote - Europe", "Lisbon"]
+    },
+    "country": "PT",
+    "workplaceType": "remote",
+    "description": "<div>Globex builds billing tools.</div>",
+    "descriptionPlain": "Globex builds billing tools.",
+    "lists": [{ "text": "What you will do", "content": "<li>Build React and TypeScript features</li>" }],
+    "additional": "<div>We offer a learning budget.</div>",
+    "salaryRange": { "min": 6000, "max": 8000, "currency": "EUR", "interval": "per-month-salary" }
+  },
+  {
+    "id": "aaaaaaaa-0000-4000-8000-000000000002",
+    "text": "Office Coordinator",
+    "hostedUrl": "https://jobs.lever.co/globex/aaaaaaaa-0000-4000-8000-000000000002",
+    "createdAt": 1772798400000,
+    "categories": { "commitment": "Part-time contractor", "location": "Lisbon" },
+    "workplaceType": "on-site",
+    "description": "<p>Run the office.</p>"
+  },
+  { "id": 7, "text": null }
+]

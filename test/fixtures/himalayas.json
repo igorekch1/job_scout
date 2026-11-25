@@ -1,0 +1,34 @@
+{
+  "updatedAt": 1772712000,
+  "totalCount": 2,
+  "jobs": [
+    {
+      "title": "Senior Full-Stack Engineer (React, Node.js)",
+      "companyName": "Northwind Labs",
+      "employmentType": "Full Time",
+      "minSalary": 70000,
+      "maxSalary": 90000,
+      "currency": "EUR",
+      "salaryPeriod": "annual",
+      "seniority": ["Senior"],
+      "locationRestrictions": ["Netherlands", "Germany"],
+      "description": "<p>React front end, Node.js back end.</p>",
+      "pubDate": 1772712000,
+      "expiryDate": 1775304000,
+      "applicationLink": "https://jobs.example.com/apply/1",
+      "guid": "https://himalayas.app/companies/northwind-labs/jobs/senior-full-stack-engineer"
+    },
+    {
+      "title": "Product Designer",
+      "companyName": "Acme Robotics",
+      "employmentType": "Contractor",
+      "minSalary": null,
+      "maxSalary": null,
+      "locationRestrictions": [],
+      "description": "<p>Design things.</p>",
+      "pubDate": 1772625600,
+      "applicationLink": "https://jobs.example.com/apply/2",
+      "guid": "https://himalayas.app/companies/acme-robotics/jobs/product-designer"
+    }
+  ]
+}

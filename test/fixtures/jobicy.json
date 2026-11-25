@@ -1,0 +1,33 @@
+{
+  "apiVersion": "test",
+  "friendlyNotice": "Fake data for tests.",
+  "jobCount": 2,
+  "jobs": [
+    {
+      "id": 700001,
+      "url": "https://jobicy.com/jobs/700001-lead-frontend-engineer",
+      "jobTitle": "Lead Frontend Engineer",
+      "companyName": "Initech",
+      "jobIndustry": ["Software Engineering"],
+      "jobType": ["Full-Time"],
+      "jobGeo": "EMEA",
+      "jobLevel": "Senior",
+      "jobDescription": "<p>Lead the Vue and TypeScript web app.</p>",
+      "pubDate": "2026-03-05T08:00:00+00:00",
+      "annualSalaryMin": "80000",
+      "annualSalaryMax": "95000",
+      "salaryCurrency": "EUR"
+    },
+    {
+      "id": 700002,
+      "url": "https://jobicy.com/jobs/700002-copywriter",
+      "jobTitle": "Copywriter",
+      "companyName": "Globex",
+      "jobIndustry": ["Marketing"],
+      "jobType": ["Part-Time"],
+      "jobGeo": "Anywhere",
+      "jobDescription": "<p>Write blog posts.</p>",
+      "pubDate": "2026-03-05T07:00:00+00:00"
+    }
+  ]
+}
