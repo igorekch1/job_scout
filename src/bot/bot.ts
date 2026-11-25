@@ -1,10 +1,12 @@
-import { Bot, GrammyError, type Context, type InlineKeyboard } from 'grammy';
+import { Bot, GrammyError, InlineKeyboard, type Context } from 'grammy';
 import type { BotFullInfo } from 'grammy/types';
 import type { Config } from '../config/schema.js';
 import type { Db } from '../db/client.js';
 import {
+  getDisabledSources,
   getSetting,
   getSourceStates,
+  setSourceEnabled,
   isPaused,
   setSetting,
   SETTING_PAUSED,
@@ -36,6 +38,7 @@ import {
   type CardData,
 } from './cards.js';
 import { loadCard, loadCounts, recordExternal, resolveJob, snoozeJob } from './queries.js';
+import { buildDigest, buildStats, searchJobs } from './reports.js';
 
 export interface BotDeps {
   token: string;
@@ -58,6 +61,10 @@ export interface BotDeps {
 
 export const COMMANDS = [
   { command: 'status', description: 'Sources health, last runs and counts' },
+  { command: 'digest', description: 'Summary of the last 24 hours' },
+  { command: 'search', description: 'Search stored jobs: /search react remote' },
+  { command: 'stats', description: 'Found, kept, dropped by reason, tracked' },
+  { command: 'sources', description: 'Turn sources on or off' },
   { command: 'filters', description: 'Show the active filter rules' },
   { command: 'pause', description: 'Stop collecting and sending jobs' },
   { command: 'resume', description: 'Resume after /pause' },
@@ -144,6 +151,7 @@ export function createBot(deps: BotDeps): Bot {
 
   bot.command('status', async (ctx) => {
     const at = now();
+    const disabled = await getDisabledSources(db);
     const [paused, heartbeat, states, counts, health] = await Promise.all([
       isPaused(db),
       getSetting<string>(db, SETTING_WORKER_HEARTBEAT),
@@ -174,7 +182,9 @@ export function createBot(deps: BotDeps): Bot {
     for (const source of sources) {
       const state = states.get(source.id);
       const id = escapeHtml(source.id);
-      if (!state?.lastRunAt) {
+      if (disabled.has(source.id)) {
+        lines.push(`⚪️ ${id}: off (/sources)`);
+      } else if (!state?.lastRunAt) {
         lines.push(`⏳ ${id}: not run yet`);
       } else if (state.lastError) {
         const failures = `${state.consecutiveFailures} failure${state.consecutiveFailures === 1 ? '' : 's'}`;
@@ -190,6 +200,61 @@ export function createBot(deps: BotDeps): Bot {
     for (const type of unsupported)
       lines.push(`🚧 ${escapeHtml(type)}: enabled but not implemented yet`);
     await ctx.reply(lines.join('\n'), HTML);
+  });
+
+  bot.command('digest', async (ctx) => {
+    await ctx.reply(await buildDigest(db, config, now()), HTML);
+  });
+
+  bot.command('stats', async (ctx) => {
+    await ctx.reply(await buildStats(db, now()), HTML);
+  });
+
+  bot.command('search', async (ctx) => {
+    await ctx.reply(await searchJobs(db, ctx.match), HTML);
+  });
+
+  /** One button per source; the index keeps callback data short. */
+  const sourcesView = async (): Promise<{ text: string; keyboard: InlineKeyboard }> => {
+    const { sources } = buildSources(config);
+    const disabled = await getDisabledSources(db);
+    const keyboard = new InlineKeyboard();
+    sources.forEach((source, index) => {
+      const on = !disabled.has(source.id);
+      keyboard.text(`${on ? '🟢' : '⚪️'} ${truncate(source.id, 40)}`, `src:${index}`).row();
+    });
+    const text =
+      sources.length === 0
+        ? 'No sources are enabled in config.yaml.'
+        : `<b>Sources</b>\nTap to turn one on or off. Sources missing here are disabled in config.yaml.`;
+    return { text, keyboard };
+  };
+
+  bot.command('sources', async (ctx) => {
+    const view = await sourcesView();
+    await ctx.reply(view.text, { ...HTML, reply_markup: view.keyboard });
+  });
+
+  bot.callbackQuery(/^src:(\d+)$/, async (ctx) => {
+    const source = buildSources(config).sources[Number(ctx.match[1])];
+    if (!source) {
+      await ctx.answerCallbackQuery({ text: 'That source no longer exists.' });
+      return;
+    }
+    const disabled = await getDisabledSources(db);
+    const enable = disabled.has(source.id);
+    await setSourceEnabled(db, source.id, enable);
+    await ctx.answerCallbackQuery({ text: `${source.id} ${enable ? 'on' : 'off'}` });
+    const view = await sourcesView();
+    await ctx
+      .editMessageText(view.text, { ...HTML, reply_markup: view.keyboard })
+      .catch((error: unknown) => {
+        if (!(
+          error instanceof GrammyError && error.description.includes('message is not modified')
+        )) {
+          throw error;
+        }
+      });
   });
 
   /* ------------------------------------------------------------ cards */

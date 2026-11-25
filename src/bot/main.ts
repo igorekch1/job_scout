@@ -10,6 +10,7 @@ import { AnthropicLlm } from '../llm/client.js';
 import { pricingFor } from '../llm/pricing.js';
 import { loadProfile } from '../scoring/profile.js';
 import { COMMANDS, createBot, type BotDeps } from './bot.js';
+import { maybeSendDigest } from './digest.js';
 import { Outbox } from './outbox.js';
 
 function createDrafter(config: Config, apiKey: string | undefined): BotDeps['drafter'] {
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
     stopping = true;
     logger.info({ signal }, 'shutting down');
     outbox.stop();
+    clearInterval(digestTimer);
     void bot
       .stop()
       .then(close)
@@ -86,6 +88,12 @@ async function main(): Promise<void> {
 
   await bot.api.setMyCommands([...COMMANDS]);
   outbox.start();
+  const digestDeps = { db, config, api: bot.api, logger };
+  const digestTimer = setInterval(() => {
+    maybeSendDigest(digestDeps, new Date()).catch((error: unknown) =>
+      logger.error({ err: error }, 'daily digest failed'),
+    );
+  }, 60_000);
   await bot.start({
     allowed_updates: ['message', 'callback_query'],
     onStart: (me) => logger.info({ username: me.username }, 'bot started'),
