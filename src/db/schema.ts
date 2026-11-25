@@ -181,6 +181,10 @@ export const trackerEntries = pgTable('tracker_entries', {
   location: text('location'),
   postedAt: timestamptz('posted_at'),
   addedAt: timestamptz('added_at').notNull().defaultNow(),
+  /** Which tracker received it: "postgres", or an external one such as "notion". */
+  tracker: text('tracker').notNull().default('postgres'),
+  externalRef: text('external_ref'),
+  externalUrl: text('external_url'),
 });
 
 /** Runtime overrides set through bot commands (pause, per-source switches). */
