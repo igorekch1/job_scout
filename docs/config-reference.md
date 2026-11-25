@@ -145,16 +145,24 @@ Rule filter. Every rule is optional; every drop records a reason code.
 
 ## `scoring`
 
-Optional LLM scoring (requires ANTHROPIC_API_KEY).
+Optional LLM scoring with Claude.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `scoring.enabled` | boolean | `false` | Score kept jobs with an LLM. Not implemented yet. |
-| `scoring.model` | string | `"claude-sonnet-5-5"` | Anthropic model name. |
-| `scoring.daily_budget_usd` | number | `1` | Hard cap on daily LLM spend. |
+| `scoring.enabled` | boolean | `false` | Score kept jobs with Claude before they are sent (requires ANTHROPIC_API_KEY and application.profile_file). |
+| `scoring.model` | string | `"claude-opus-5-5"` | Anthropic model id. |
+| `scoring.effort` | `low` \| `medium` \| `high` | `"low"` | How hard the model thinks per job. "low" is enough for this classification. |
+| `scoring.daily_budget_usd` | number | `1` | Hard cap on LLM spend per calendar day in user.timezone. Once reached, jobs are sent unscored until midnight. |
+| `scoring.pricing` | object |  | Prices for spend tracking. Built in for current Claude models; set it for any other model. |
+| `scoring.pricing.input` | number |  | **Required.** USD per million input tokens. |
+| `scoring.pricing.output` | number |  | **Required.** USD per million output tokens. |
+| `scoring.pricing.cache_read` | number |  | USD per million cached input tokens. |
 | `scoring.priorities` | list of object | `[]` | Priority buckets, best first. |
 | `scoring.priorities[].label` | string |  | **Required.** Short label shown on cards. |
 | `scoring.priorities[].definition` | string |  | **Required.** What qualifies a job for this bucket. |
+| `scoring.industries` | list of string | `[]` | Optional industry labels the model picks one from, written to the tracker. |
+| `scoring.min_fit_score` | number |  | Do not send jobs scored below this (0-100). They stay searchable. Omit to send every kept job. |
+| `scoring.max_description_chars` | integer | `20000` | Longer descriptions are cut to this length before scoring, to bound cost. |
 
 ## `telegram`
 
@@ -211,6 +219,6 @@ Application tracker.
 | `DATABASE_URL` | bot, worker | PostgreSQL connection string. |
 | `CONFIG_PATH` | no | Path to the config file. Defaults to `config.yaml`. |
 | `LOG_LEVEL` | no | Overrides `app.log_level`. |
-| `ANTHROPIC_API_KEY` | no | LLM scoring and application drafts (planned). |
+| `ANTHROPIC_API_KEY` | with scoring | Anthropic API key for LLM scoring and application drafts. |
 | `NOTION_TOKEN` | with Notion | Secret of your Notion integration. |
 | `TG_API_ID`, `TG_API_HASH`, `TG_SESSION` | no | Telegram channel reader (planned). |

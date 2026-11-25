@@ -200,3 +200,40 @@ export type JobLinkRow = typeof jobLinks.$inferSelect;
 export type DeliveryRow = typeof deliveries.$inferSelect;
 export type SourceStateRow = typeof sourceState.$inferSelect;
 export type TrackerEntryRow = typeof trackerEntries.$inferSelect;
+
+/** One LLM assessment per job. */
+export const llmScores = pgTable('llm_scores', {
+  jobId: integer('job_id')
+    .primaryKey()
+    .references(() => jobs.id, { onDelete: 'cascade' }),
+  model: text('model').notNull(),
+  priority: text('priority'),
+  fitScore: integer('fit_score'),
+  reason: text('reason'),
+  stack: jsonb('stack').$type<string[]>().notNull().default([]),
+  redFlags: jsonb('red_flags').$type<{ kind: string; note: string }[]>().notNull().default([]),
+  industry: text('industry'),
+  costUsd: doublePrecision('cost_usd').notNull().default(0),
+  createdAt: timestamptz('created_at').notNull().defaultNow(),
+});
+
+/** Spend per call, for the daily budget. */
+export const llmUsage = pgTable(
+  'llm_usage',
+  {
+    id: serial('id').primaryKey(),
+    /** Calendar day in the user's time zone, "YYYY-MM-DD". */
+    day: text('day').notNull(),
+    purpose: text('purpose').notNull(),
+    model: text('model').notNull(),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    cacheReadTokens: integer('cache_read_tokens').notNull().default(0),
+    cacheWriteTokens: integer('cache_write_tokens').notNull().default(0),
+    costUsd: doublePrecision('cost_usd').notNull(),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+  },
+  (table) => [index('llm_usage_day_idx').on(table.day)],
+);
+
+export type LlmScoreRow = typeof llmScores.$inferSelect;

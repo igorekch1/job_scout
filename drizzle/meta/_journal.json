@@ -15,6 +15,13 @@
       "when": 1795640823711,
       "tag": "0001_breezy_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795641090470,
+      "tag": "0002_easy_jackpot",
+      "breakpoints": true
     }
   ]
 }
