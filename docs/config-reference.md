@@ -178,14 +178,17 @@ Application tracker.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `tracker.type` | `postgres` \| `notion` | `"postgres"` | Where "Add to tracker" writes. "postgres" is built in and needs no setup. |
+| `tracker.type` | `postgres` \| `notion` | `"postgres"` | Where "Add to tracker" writes. "postgres" is built in and needs no setup. Tracked jobs are always also recorded locally. |
 | `tracker.liveness_check` | boolean | `true` | Re-check that a posting is still open before adding it to the tracker. |
-| `tracker.notion` | object |  | Notion adapter settings (requires NOTION_TOKEN). Not implemented yet. |
-| `tracker.notion.data_source_id` | string |  | **Required.** Notion data source (database) ID. |
-| `tracker.notion.properties` | map of string to string | `{}` | Job field -> your Notion property name. Property types are read from Notion. |
-| `tracker.notion.values` | map of string to map of string to string | `{}` | Per-field value mapping, e.g. work_format: { remote: Remote }. |
-| `tracker.notion.defaults` | map of string to string | `{}` | Static values written on insert, e.g. status: "To Apply". |
-| `tracker.notion.auto_number` | object |  | Optional running number for new rows. |
+| `tracker.closed_patterns` | list of string | `[]` | Extra regular expressions (case-insensitive) that mark a posting page as closed, for boards whose wording the built-in English patterns miss. |
+| `tracker.notion` | object |  | Notion adapter settings (requires NOTION_TOKEN). |
+| `tracker.notion.data_source_id` | string |  | **Required.** ID of the Notion data source to write to. In Notion: database menu → "Manage data sources" → copy the data source ID. |
+| `tracker.notion.api_version` | string | `"2026-03-11"` | Notion-Version header sent with every request. |
+| `tracker.notion.properties` | map of string to string | `{}` | Job field -> your Notion property name. Fields: company, title, url, links, salary, location, work_format, employment, source, priority, status, industry, posted_at, added_at. Property types are read from Notion, so any title, text, URL, select, multi-select, status, date or number property works. Unmapped fields are not written. |
+| `tracker.notion.values` | map of string to map of string to string | `{}` | Per-field value mapping, e.g. work_format: { remote: Remote, onsite: Office }. For `source` the keys are source ids or types and may end with "*", e.g. { "rss:board-*": Board, greenhouse: "Company website" }. |
+| `tracker.notion.defaults` | map of string to string \| number \| boolean | `{}` | Values written on every insert, keyed by a job field from `properties` or by a Notion property name, e.g. status: "To Apply". |
+| `tracker.notion.create_select_options` | boolean | `false` | Let Notion create a missing select option. When false, a value that is not an existing option is skipped and reported on the card. |
+| `tracker.notion.auto_number` | object |  | Optional running number for new rows: the current maximum plus one. |
 | `tracker.notion.auto_number.property` | string |  | **Required.** Number property that receives a running number. |
 | `tracker.notion.auto_number.strategy` | `max_plus_one` | `"max_plus_one"` |  |
 
@@ -209,5 +212,5 @@ Application tracker.
 | `CONFIG_PATH` | no | Path to the config file. Defaults to `config.yaml`. |
 | `LOG_LEVEL` | no | Overrides `app.log_level`. |
 | `ANTHROPIC_API_KEY` | no | LLM scoring and application drafts (planned). |
-| `NOTION_TOKEN` | no | Notion tracker (planned). |
+| `NOTION_TOKEN` | with Notion | Secret of your Notion integration. |
 | `TG_API_ID`, `TG_API_HASH`, `TG_SESSION` | no | Telegram channel reader (planned). |
