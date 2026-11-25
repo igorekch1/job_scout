@@ -589,7 +589,10 @@ const telegramSchema = z
       .describe('Choices offered by the Reject button. Stored to tune filters later.'),
     digest: z
       .strictObject({
-        enabled: z.boolean().default(false).describe('Send a daily summary. Not implemented yet.'),
+        enabled: z
+          .boolean()
+          .default(false)
+          .describe('Send a daily summary: counts, top picks and failing sources.'),
         time: timeOfDay.default('09:00').describe('Local time of the daily summary.'),
       })
       .prefault({})
