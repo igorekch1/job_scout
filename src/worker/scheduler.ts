@@ -1,6 +1,7 @@
 import type { SourceStateRow } from '../db/schema.js';
 import {
   claimSource,
+  getDisabledSources,
   getSourceStates,
   isPaused,
   setSetting,
@@ -74,7 +75,9 @@ export class Scheduler {
       if (await isPaused(db)) return started;
 
       const states = await getSourceStates(db);
+      const disabled = await getDisabledSources(db);
       const due = this.sources
+        .filter((source) => !disabled.has(source.id))
         .filter((source) => !this.running.has(source.id))
         .filter((source) => nextRunAt(source, states.get(source.id)) <= now)
         .sort(
