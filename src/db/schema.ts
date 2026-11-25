@@ -237,3 +237,24 @@ export const llmUsage = pgTable(
 );
 
 export type LlmScoreRow = typeof llmScores.$inferSelect;
+
+/** Generated application drafts, one per job, so a second tap costs nothing. */
+export const applicationDrafts = pgTable('application_drafts', {
+  jobId: integer('job_id')
+    .primaryKey()
+    .references(() => jobs.id, { onDelete: 'cascade' }),
+  model: text('model').notNull(),
+  coverLetter: text('cover_letter').notNull(),
+  answers: jsonb('answers')
+    .$type<
+      { question: string; required: boolean; answer: string; needsInput: boolean; note: string }[]
+    >()
+    .notNull()
+    .default([]),
+  /** Questions found but deliberately not drafted (personal details, demographics). */
+  skipped: jsonb('skipped').$type<string[]>().notNull().default([]),
+  costUsd: doublePrecision('cost_usd').notNull().default(0),
+  createdAt: timestamptz('created_at').notNull().defaultNow(),
+});
+
+export type ApplicationDraftRow = typeof applicationDrafts.$inferSelect;

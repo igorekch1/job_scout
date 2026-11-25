@@ -202,13 +202,16 @@ Application tracker.
 
 ## `application`
 
-"Prepare application" drafts. Not implemented yet.
+"Prepare application" drafts: answers to the posting's questions (Greenhouse) and a short cover letter. Drafts count against scoring.daily_budget_usd.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `application.profile_file` | string | `"profile.md"` | Path to your profile, relative to the config file. |
+| `application.enabled` | boolean | `false` | Show the "Prepare application" button (requires ANTHROPIC_API_KEY and profile_file). |
+| `application.model` | string | `"claude-opus-5-5"` | Anthropic model id for drafts. |
+| `application.effort` | `low` \| `medium` \| `high` | `"medium"` | How hard the model thinks per draft. |
+| `application.profile_file` | string | `"profile.md"` | Path to your profile, relative to the config file. Drafts use only facts written here. |
 | `application.language` | string | `"en"` | Language of generated texts. |
-| `application.cover_letter_max_words` | integer | `180` |  |
+| `application.cover_letter_max_words` | integer | `180` | Upper bound for the cover letter length. |
 | `application.style_rules` | list of string | `[]` | Free-form writing rules passed to the generator. |
 
 ## Environment variables
