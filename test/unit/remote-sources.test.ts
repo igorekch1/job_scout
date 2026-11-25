@@ -204,7 +204,8 @@ describe('registry', () => {
       ['remotive:software-dev', 360],
       ['remoteok', 60],
       ['jobicy', 120],
+      ['telegram:example', 10],
     ]);
-    expect(unsupported).toEqual(['telegram_channels']);
+    expect(unsupported).toEqual([]);
   });
 });

@@ -116,7 +116,7 @@ function render(): string {
     '| `LOG_LEVEL` | no | Overrides `app.log_level`. |',
     '| `ANTHROPIC_API_KEY` | with scoring | Anthropic API key for LLM scoring and application drafts. |',
     '| `NOTION_TOKEN` | with Notion | Secret of your Notion integration. |',
-    '| `TG_API_ID`, `TG_API_HASH`, `TG_SESSION` | no | Telegram channel reader (planned). |',
+    '| `TG_API_ID`, `TG_API_HASH`, `TG_SESSION` | with Telegram channels | App credentials from my.telegram.org and the session string from `pnpm tg:login`. |',
     '',
   );
   return lines.join('\n');

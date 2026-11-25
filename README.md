@@ -5,8 +5,8 @@ sends each match to you as a card you can act on in one tap.
 
 The goal is speed: a matching job should reach you within minutes of being published.
 
-> **Status:** working today: RSS/Atom, Greenhouse, Ashby, Lever, Himalayas, Remotive, RemoteOK and
-> Jobicy sources, the rule filter,
+> **Status:** working today: RSS/Atom, Greenhouse, Ashby, Lever, Himalayas, Remotive, RemoteOK,
+> Jobicy and Telegram channel sources, the rule filter,
 > deduplication, optional LLM scoring, Telegram cards with _Add to tracker_, _Reject_, _Later_
 > and _Prepare application_, the built-in Postgres tracker and the Notion tracker. See the [roadmap](#roadmap) for what comes
 > next.
@@ -155,6 +155,46 @@ With `application.enabled: true` (and `ANTHROPIC_API_KEY` plus `profile.md`), ca
   `scoring.daily_budget_usd`.
 - **Nothing is sent anywhere.** The bot never submits the application.
 
+## Telegram channels
+
+Many jobs are posted only in Telegram channels. Bots cannot read other people's channels, so this
+source signs in with **your own Telegram account** and reads the channels you list. It is off by
+default.
+
+> **Read this first.** The session string gives full access to your Telegram account, like a
+> password. Keep it only in `.env`, never commit it, and if it leaks, end the session in Telegram
+> under **Settings → Devices**. The reader only fetches channel history: it never sends messages,
+> joins channels or reacts. Telegram may still rate-limit or restrict accounts that automate
+> heavily; keep the channel list and interval reasonable.
+
+1. Create an app at [my.telegram.org/apps](https://my.telegram.org/apps) and put its `api_id` and
+   `api_hash` in `.env` as `TG_API_ID` and `TG_API_HASH`.
+2. Create the session string once, interactively:
+
+   ```bash
+   pnpm tg:login
+   # or, with Docker: docker compose run --rm -it worker node dist/tools/telegram-login.js
+   ```
+
+   Enter your phone number, the login code and your two-step password if you have one, then copy
+   the printed `TG_SESSION=...` line into `.env`.
+
+3. Enable the source:
+
+   ```yaml
+   sources:
+     telegram_channels:
+       enabled: true
+       channels: [example_jobs, another_channel] # usernames, with or without "@"
+       posts_per_run: 30
+   ```
+
+Each post is read as one job: the title, company, location and pay come from labelled lines
+("Position:", "Company:", "Location:", "Salary:" and their Ukrainian and Russian equivalents) or
+from a "Title at Company" header. The apply link is the first non-Telegram link in the post, or the
+post itself. Posts that do not look like job postings are skipped. Free text is less precise than
+an ATS API; with LLM scoring on, the score and red flags make up for most of it.
+
 ## Notion tracker
 
 By default _Add to tracker_ writes to a table in your own Postgres. To write to a Notion database
@@ -265,7 +305,9 @@ src/
   config/      Zod schema, YAML and env loading
   db/          Drizzle schema, client, stores
   http/        polite HTTP client: User-Agent, ETag cache, backoff, per-host throttle
-  sources/     collectors: rss, greenhouse, ashby, lever, himalayas, remotive, remoteok, jobicy
+  sources/     collectors: rss, greenhouse, ashby, lever, himalayas, remotive, remoteok, jobicy,
+               telegram channels
+  tools/       one-off tools such as the Telegram login
   normalize/   Job shape; salary, location and hours parsers
   dedup/       canonical URL and fuzzy key
   filters/     rule filter with reason codes
@@ -311,14 +353,13 @@ job-scout is built to be a polite, low-volume reader of data that sites publish 
 - **Your data stays with you.** Everything is stored in your own Postgres. Tokens and keys are read
   from the environment and are redacted from logs.
 
-The optional Telegram channel reader (planned) will use **your own Telegram account** through a
-session string. It will be off by default and documented separately, because a session string gives
-full access to the account.
+The optional Telegram channel reader uses **your own Telegram account** through a session string.
+It is off by default, read-only, and documented in [Telegram channels](#telegram-channels), because
+a session string gives full access to the account.
 
 ## Roadmap
 
-1. Telegram channel reader through your own account.
-2. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
+1. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
 
 ## License
 

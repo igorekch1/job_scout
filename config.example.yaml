@@ -41,10 +41,10 @@ sources:
   remotive: { enabled: false, category: software-dev, search: [react] } # at most every 6 h
   remoteok: { enabled: false, tags: [react, javascript] } # at most hourly
   jobicy: { enabled: false, tags: [react, frontend], geo: europe } # at most hourly
-  # Planned, not implemented yet:
-  telegram_channels: # uses YOUR account via TG_API_ID / TG_API_HASH / TG_SESSION
+  telegram_channels: # reads with YOUR account; see "Telegram channels" in the README
     enabled: false
-    channels: []
+    channels: [] # e.g. [example_jobs]
+    posts_per_run: 30
 
 dedup:
   window_days: 14

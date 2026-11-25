@@ -15,7 +15,10 @@ const baseEnv = z.object({
   LOG_LEVEL: optionalSecret,
   ANTHROPIC_API_KEY: optionalSecret,
   NOTION_TOKEN: optionalSecret,
-  TG_API_ID: optionalSecret,
+  TG_API_ID: optionalSecret.refine(
+    (value) => value === undefined || /^\d+$/.test(value),
+    'must be the numeric api_id from my.telegram.org',
+  ),
   TG_API_HASH: optionalSecret,
   TG_SESSION: optionalSecret,
 });
