@@ -12,6 +12,7 @@ import { AnthropicLlm } from '../llm/client.js';
 import { pricingFor } from '../llm/pricing.js';
 import { loadProfile } from '../scoring/profile.js';
 import { Scorer } from '../scoring/scorer.js';
+import { GramJsReader, type ChannelReader } from '../sources/telegram/reader.js';
 import { Scheduler } from './scheduler.js';
 
 function createScorer(
@@ -47,13 +48,31 @@ function createScorer(
   });
 }
 
+function createTelegramReader(
+  config: Config,
+  env: { TG_API_ID?: string; TG_API_HASH?: string; TG_SESSION?: string },
+): ChannelReader | undefined {
+  if (!config.sources.telegram_channels.enabled) return undefined;
+  if (!env.TG_API_ID || !env.TG_API_HASH || !env.TG_SESSION) {
+    throw new ConfigError(
+      'sources.telegram_channels is enabled but TG_API_ID, TG_API_HASH and TG_SESSION are not all set. See "Telegram channels" in the README.',
+    );
+  }
+  return new GramJsReader({
+    apiId: Number(env.TG_API_ID),
+    apiHash: env.TG_API_HASH,
+    session: env.TG_SESSION,
+  });
+}
+
 function main(): void {
   const config = loadConfig();
   const env = loadWorkerEnv();
   const logger = createLogger('worker', config.app.log_level);
   const { db, close } = createDb(env.DATABASE_URL);
 
-  const { sources, unsupported } = buildSources(config);
+  const telegramReader = createTelegramReader(config, env);
+  const { sources, unsupported } = buildSources(config, { telegramReader });
   for (const type of unsupported) {
     logger.warn({ source: type }, 'source is enabled in config but not implemented yet; skipping');
   }
@@ -85,6 +104,7 @@ function main(): void {
     stopping = true;
     logger.info({ signal }, 'shutting down');
     if (scoringTimer) clearInterval(scoringTimer);
+    void telegramReader?.close();
     void scheduler
       .stop()
       .then(close)

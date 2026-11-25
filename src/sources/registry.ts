@@ -9,10 +9,12 @@ import {
   createRemotiveSource,
 } from './remote-boards.js';
 import { createRssSource } from './rss.js';
+import type { ChannelReader } from './telegram/reader.js';
+import { createTelegramChannelSource, normalizeChannel } from './telegram/source.js';
 import type { Source } from './types.js';
 
 /** Source types present in the config schema that have no collector yet. */
-const PLANNED = ['telegram_channels'] as const;
+const PLANNED: readonly (keyof Config['sources'])[] = [];
 
 /**
  * Lower bounds on polling intervals, from each provider's published guidance. A shorter
@@ -32,7 +34,18 @@ export interface SourceRegistry {
 }
 
 /** Builds one Source per configured feed or board. */
-export function buildSources(config: Config): SourceRegistry {
+export interface BuildOptions {
+  /** Reader for Telegram channels; without it those sources fail with a clear message. */
+  telegramReader?: ChannelReader;
+}
+
+const missingReader: ChannelReader = {
+  read: () =>
+    Promise.reject(new Error('Telegram channel reader is not configured in this process')),
+  close: () => Promise.resolve(),
+};
+
+export function buildSources(config: Config, options: BuildOptions = {}): SourceRegistry {
   const { sources: settings, schedule } = config;
   const interval = (own: number | undefined, type?: string): number =>
     Math.max(own ?? schedule.default_interval_minutes, MIN_INTERVAL_MINUTES[type ?? ''] ?? 1);
@@ -92,6 +105,21 @@ export function buildSources(config: Config): SourceRegistry {
     sources.push(
       createJobicySource(settings.jobicy, interval(settings.jobicy.interval_minutes, 'jobicy')),
     );
+  }
+
+  if (settings.telegram_channels.enabled) {
+    const reader = options.telegramReader ?? missingReader;
+    const channels = new Set(settings.telegram_channels.channels.map(normalizeChannel));
+    for (const channel of channels) {
+      sources.push(
+        createTelegramChannelSource(
+          channel,
+          reader,
+          interval(settings.telegram_channels.interval_minutes),
+          settings.telegram_channels.posts_per_run,
+        ),
+      );
+    }
   }
 
   return { sources, unsupported: PLANNED.filter((type) => settings[type].enabled) };
