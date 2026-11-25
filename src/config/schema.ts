@@ -425,9 +425,31 @@ const scoringSchema = z
     enabled: z
       .boolean()
       .default(false)
-      .describe('Score kept jobs with an LLM. Not implemented yet.'),
-    model: z.string().trim().min(1).default('claude-sonnet-5-5').describe('Anthropic model name.'),
-    daily_budget_usd: z.number().min(0).default(1).describe('Hard cap on daily LLM spend.'),
+      .describe(
+        'Score kept jobs with Claude before they are sent (requires ANTHROPIC_API_KEY and application.profile_file).',
+      ),
+    model: z.string().trim().min(1).default('claude-opus-5-5').describe('Anthropic model id.'),
+    effort: z
+      .enum(['low', 'medium', 'high'])
+      .default('low')
+      .describe('How hard the model thinks per job. "low" is enough for this classification.'),
+    daily_budget_usd: z
+      .number()
+      .min(0)
+      .default(1)
+      .describe(
+        'Hard cap on LLM spend per calendar day in user.timezone. Once reached, jobs are sent unscored until midnight.',
+      ),
+    pricing: z
+      .strictObject({
+        input: z.number().min(0).describe('USD per million input tokens.'),
+        output: z.number().min(0).describe('USD per million output tokens.'),
+        cache_read: z.number().min(0).optional().describe('USD per million cached input tokens.'),
+      })
+      .optional()
+      .describe(
+        'Prices for spend tracking. Built in for current Claude models; set it for any other model.',
+      ),
     priorities: z
       .array(
         z.strictObject({
@@ -437,8 +459,27 @@ const scoringSchema = z
       )
       .default([])
       .describe('Priority buckets, best first.'),
+    industries: z
+      .array(z.string().trim().min(1).max(60))
+      .default([])
+      .describe('Optional industry labels the model picks one from, written to the tracker.'),
+    min_fit_score: z
+      .number()
+      .min(0)
+      .max(100)
+      .optional()
+      .describe(
+        'Do not send jobs scored below this (0-100). They stay searchable. Omit to send every kept job.',
+      ),
+    max_description_chars: z
+      .number()
+      .int()
+      .min(1000)
+      .max(100_000)
+      .default(20_000)
+      .describe('Longer descriptions are cut to this length before scoring, to bound cost.'),
   })
-  .describe('Optional LLM scoring (requires ANTHROPIC_API_KEY).');
+  .describe('Optional LLM scoring with Claude.');
 
 /* ----------------------------------------------------------------- telegram */
 
@@ -644,6 +685,15 @@ export const configSchema = z
         code: 'custom',
         path: ['tracker', 'notion'],
         message: 'required when tracker.type is "notion"',
+      });
+    }
+
+    const labels = config.scoring.priorities.map((priority) => priority.label);
+    if (new Set(labels).size !== labels.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scoring', 'priorities'],
+        message: 'priority labels must be unique',
       });
     }
 

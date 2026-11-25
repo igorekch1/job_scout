@@ -12,6 +12,8 @@ import { HttpClient } from '../../src/http/client.js';
 import { silentLogger } from '../../src/logger.js';
 import { buildSources } from '../../src/sources/registry.js';
 import { createTracker } from '../../src/trackers/index.js';
+import type { LlmClient } from '../../src/llm/client.js';
+import { Scorer } from '../../src/scoring/scorer.js';
 import { Scheduler } from '../../src/worker/scheduler.js';
 
 export async function createTestDb(): Promise<{ db: Db; close: () => Promise<void> }> {
@@ -135,6 +137,7 @@ export interface Harness {
   bot: Bot;
   outbox: Outbox;
   scheduler: Scheduler;
+  scorer: Scorer | undefined;
   clock: { now: Date };
   /** Runs every due source and waits for the runs to finish. */
   collect(): Promise<void>;
@@ -150,6 +153,8 @@ export const CHAT = 1001;
 export interface HarnessOptions {
   /** Answers requests to api.notion.com; enables the Notion tracker. */
   notionFetch?: typeof fetch;
+  /** Fake LLM; creates a scorer when config.scoring.enabled. */
+  llm?: LlmClient;
 }
 
 export async function createHarness(
@@ -198,6 +203,19 @@ export async function createHarness(
     { maxConcurrent: config.schedule.max_concurrent_sources },
   );
 
+  const scorer =
+    options.llm && config.scoring.enabled
+      ? new Scorer({
+          db,
+          config,
+          llm: options.llm,
+          pricing: { input: 2, output: 10, cacheRead: 0.1 },
+          profile: 'Senior frontend engineer. React and TypeScript.',
+          logger: silentLogger,
+          now,
+        })
+      : undefined;
+
   const harness: Harness = {
     db,
     config,
@@ -206,6 +224,7 @@ export async function createHarness(
     bot,
     outbox,
     scheduler,
+    scorer,
     clock,
     collect: async () => {
       for (let runs = await scheduler.tick(); runs.length > 0; runs = await scheduler.tick()) {

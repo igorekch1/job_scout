@@ -114,7 +114,7 @@ function render(): string {
     '| `DATABASE_URL` | bot, worker | PostgreSQL connection string. |',
     '| `CONFIG_PATH` | no | Path to the config file. Defaults to `config.yaml`. |',
     '| `LOG_LEVEL` | no | Overrides `app.log_level`. |',
-    '| `ANTHROPIC_API_KEY` | no | LLM scoring and application drafts (planned). |',
+    '| `ANTHROPIC_API_KEY` | with scoring | Anthropic API key for LLM scoring and application drafts. |',
     '| `NOTION_TOKEN` | with Notion | Secret of your Notion integration. |',
     '| `TG_API_ID`, `TG_API_HASH`, `TG_SESSION` | no | Telegram channel reader (planned). |',
     '',

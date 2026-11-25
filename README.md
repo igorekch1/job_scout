@@ -6,8 +6,9 @@ sends each match to you as a card you can act on in one tap.
 The goal is speed: a matching job should reach you within minutes of being published.
 
 > **Status:** working today: RSS/Atom, Greenhouse and Ashby sources, the rule filter,
-> deduplication, Telegram cards with _Add to tracker_, _Reject_ and _Later_, the built-in Postgres
-> tracker and the Notion tracker. See the [roadmap](#roadmap) for what comes next.
+> deduplication, optional LLM scoring, Telegram cards with _Add to tracker_, _Reject_ and _Later_,
+> the built-in Postgres tracker and the Notion tracker. See the [roadmap](#roadmap) for what comes
+> next.
 
 ## What it does
 
@@ -19,7 +20,9 @@ The goal is speed: a matching job should reach you within minutes of being publi
    one job with several links. The employer's own ATS link is preferred as the primary one.
 4. **Filters** with your rules: title and seniority keywords, stack, location, pay floors, working
    hours and age. Every dropped posting records why.
-5. **Delivers** one card per kept job to your Telegram chat, with buttons:
+5. **Scores** the kept postings with Claude, if you turn it on: a priority bucket, a fit score, a
+   one-line reason, the detected stack and red flags, judged against your `profile.md`.
+6. **Delivers** one card per kept job to your Telegram chat, with buttons:
    - **Add to tracker** re-checks that the posting is still open, then saves it.
    - **Reject** asks for a reason from your list and stores it.
    - **Later** hides the card and sends it again after the time you pick.
@@ -43,6 +46,7 @@ Requirements: Docker with the Compose plugin.
 git clone <this repository> job-scout && cd job-scout
 cp .env.example .env
 cp config.example.yaml config.yaml
+cp profile.example.md profile.md
 ```
 
 1. [Create a bot token](#create-the-bot-token) and put it in `.env` as `TELEGRAM_BOT_TOKEN`.
@@ -89,6 +93,30 @@ telegram:
 
 The bot only answers chats on this list. Everyone else gets a "this bot is private" reply to `/start`
 and silence otherwise.
+
+## LLM scoring
+
+With `scoring.enabled: true`, every job that passes the rule filter is scored by Claude before it
+is sent. The card then shows the priority bucket, a fit score from 0 to 100, a one-line reason,
+red flags (hours, location, pay, level, stack) and the detected stack. Priority and industry also
+go to the tracker.
+
+1. Put an Anthropic API key in `.env` as `ANTHROPIC_API_KEY`.
+2. Fill in `profile.md` (start from [profile.example.md](profile.example.md)). It is gitignored.
+3. Configure `scoring` in `config.yaml`: the model, your priority buckets with a definition each,
+   optional industry labels and a daily budget.
+
+How it behaves:
+
+- **Budget.** Spend is computed from the token counts of every call and capped per calendar day in
+  your time zone. When the cap is reached, jobs are sent unscored until midnight. `/status` shows
+  today's spend.
+- **Never blocks delivery.** If the API fails three times or the model declines a posting, the job
+  is sent unscored.
+- **Cached.** Each job is scored once. The instructions and your profile form a fixed prefix that
+  is prompt-cached, so repeated calls pay mostly for the posting itself.
+- **Threshold.** With `min_fit_score`, jobs scored below it are not sent; they stay in the database.
+- **Prices.** Built in for current Claude models. For any other model id, set `scoring.pricing`.
 
 ## Notion tracker
 
@@ -204,6 +232,8 @@ src/
   normalize/   Job shape; salary, location and hours parsers
   dedup/       canonical URL and fuzzy key
   filters/     rule filter with reason codes
+  llm/         Claude client, pricing and daily budget
+  scoring/     scoring prompt and the scorer queue
   pipeline/    fetch -> normalize -> dedup -> filter -> queue
   worker/      scheduler and worker entrypoint
   trackers/    tracker interface, Postgres and Notion trackers
@@ -245,12 +275,11 @@ full access to the account.
 
 ## Roadmap
 
-1. Optional LLM scoring: priority bucket, fit score, one-line reason, red flags, daily spend cap.
-2. _Prepare application_: answers to the posting's questions and a short cover letter from your
+1. _Prepare application_: answers to the posting's questions and a short cover letter from your
    `profile.md`, never inventing facts.
-3. More sources: Lever, Himalayas, Remotive, RemoteOK, Jobicy.
-4. Telegram channel reader through your own account.
-5. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
+2. More sources: Lever, Himalayas, Remotive, RemoteOK, Jobicy.
+3. Telegram channel reader through your own account.
+4. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
 
 ## License
 

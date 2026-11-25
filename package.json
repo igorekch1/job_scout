@@ -26,6 +26,7 @@
     "docs:config:check": "tsx scripts/gen-config-docs.ts --check"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
     "drizzle-orm": "^0.45.4",
     "fast-xml-parser": "^5.12.1",
     "grammy": "^1.48.0",
