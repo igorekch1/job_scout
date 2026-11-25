@@ -6,8 +6,8 @@ sends each match to you as a card you can act on in one tap.
 The goal is speed: a matching job should reach you within minutes of being published.
 
 > **Status:** working today: RSS/Atom, Greenhouse and Ashby sources, the rule filter,
-> deduplication, optional LLM scoring, Telegram cards with _Add to tracker_, _Reject_ and _Later_,
-> the built-in Postgres tracker and the Notion tracker. See the [roadmap](#roadmap) for what comes
+> deduplication, optional LLM scoring, Telegram cards with _Add to tracker_, _Reject_, _Later_
+> and _Prepare application_, the built-in Postgres tracker and the Notion tracker. See the [roadmap](#roadmap) for what comes
 > next.
 
 ## What it does
@@ -26,6 +26,8 @@ The goal is speed: a matching job should reach you within minutes of being publi
    - **Add to tracker** re-checks that the posting is still open, then saves it.
    - **Reject** asks for a reason from your list and stores it.
    - **Later** hides the card and sends it again after the time you pick.
+   - **Prepare application** (optional) drafts answers to the posting's application questions and a
+     short cover letter from your `profile.md`, ready to copy.
 
 When more jobs are waiting than `telegram.batch_threshold`, you get one digest message instead, and
 each line opens its full card.
@@ -117,6 +119,23 @@ How it behaves:
   is prompt-cached, so repeated calls pay mostly for the posting itself.
 - **Threshold.** With `min_fit_score`, jobs scored below it are not sent; they stay in the database.
 - **Prices.** Built in for current Claude models. For any other model id, set `scoring.pricing`.
+
+## Prepare application
+
+With `application.enabled: true` (and `ANTHROPIC_API_KEY` plus `profile.md`), cards get a
+**📝 Prepare application** button, also kept after a job is added to the tracker.
+
+- **Questions.** For Greenhouse postings the bot loads the real application questions from the
+  public board API, including the options of select questions. The public Ashby and Lever APIs and
+  RSS feeds do not publish questions, so for those you get the cover letter only.
+- **Only your facts.** The draft uses only what `profile.md` states. When the profile does not
+  answer a question, the answer is left empty and marked ✏️ with what you need to supply.
+- **Left to you.** Name, email, phone, resume uploads and equal-opportunity or demographic
+  questions are never drafted; the draft lists them so you do not miss them.
+- **Copyable.** Each answer comes in its own code block, which Telegram copies with one tap.
+- **Cost.** One call per job; a second tap shows the stored draft for free. Drafts count against
+  `scoring.daily_budget_usd`.
+- **Nothing is sent anywhere.** The bot never submits the application.
 
 ## Notion tracker
 
@@ -234,6 +253,7 @@ src/
   filters/     rule filter with reason codes
   llm/         Claude client, pricing and daily budget
   scoring/     scoring prompt and the scorer queue
+  applications/ application questions and drafts
   pipeline/    fetch -> normalize -> dedup -> filter -> queue
   worker/      scheduler and worker entrypoint
   trackers/    tracker interface, Postgres and Notion trackers
@@ -275,11 +295,9 @@ full access to the account.
 
 ## Roadmap
 
-1. _Prepare application_: answers to the posting's questions and a short cover letter from your
-   `profile.md`, never inventing facts.
-2. More sources: Lever, Himalayas, Remotive, RemoteOK, Jobicy.
-3. Telegram channel reader through your own account.
-4. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
+1. More sources: Lever, Himalayas, Remotive, RemoteOK, Jobicy.
+2. Telegram channel reader through your own account.
+3. Daily digest, `/stats`, `/search`, `/sources`, `/digest`.
 
 ## License
 

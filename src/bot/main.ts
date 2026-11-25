@@ -5,8 +5,31 @@ import { HttpClient } from '../http/client.js';
 import { createLogger } from '../logger.js';
 import { createTracker } from '../trackers/index.js';
 import { userAgent } from '../version.js';
-import { COMMANDS, createBot } from './bot.js';
+import type { Config } from '../config/schema.js';
+import { AnthropicLlm } from '../llm/client.js';
+import { pricingFor } from '../llm/pricing.js';
+import { loadProfile } from '../scoring/profile.js';
+import { COMMANDS, createBot, type BotDeps } from './bot.js';
 import { Outbox } from './outbox.js';
+
+function createDrafter(config: Config, apiKey: string | undefined): BotDeps['drafter'] {
+  if (!config.application.enabled) return undefined;
+  const app = config.application;
+  const pricing = pricingFor(
+    app.model,
+    app.model === config.scoring.model ? config.scoring.pricing : undefined,
+  );
+  if (!pricing) {
+    throw new ConfigError(
+      `No built-in prices for model "${app.model}". Use a current Claude model for application.model.`,
+    );
+  }
+  return {
+    llm: new AnthropicLlm({ model: app.model, effort: app.effort, apiKey }),
+    pricing,
+    profile: loadProfile(app.profile_file),
+  };
+}
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -26,7 +49,9 @@ async function main(): Promise<void> {
   } else if (health) {
     logger.info({ tracker: tracker.id }, health.detail);
   }
+  const drafter = createDrafter(config, env.ANTHROPIC_API_KEY);
   const bot = createBot({
+    drafter,
     token: env.TELEGRAM_BOT_TOKEN,
     db,
     config,

@@ -640,17 +640,43 @@ const trackerSchema = z
 
 const applicationSchema = z
   .strictObject({
+    enabled: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Show the "Prepare application" button (requires ANTHROPIC_API_KEY and profile_file).',
+      ),
+    model: z
+      .string()
+      .trim()
+      .min(1)
+      .default('claude-opus-5-5')
+      .describe('Anthropic model id for drafts.'),
+    effort: z
+      .enum(['low', 'medium', 'high'])
+      .default('medium')
+      .describe('How hard the model thinks per draft.'),
     profile_file: z
       .string()
       .trim()
       .min(1)
       .default('profile.md')
-      .describe('Path to your profile, relative to the config file.'),
+      .describe(
+        'Path to your profile, relative to the config file. Drafts use only facts written here.',
+      ),
     language: z.string().trim().min(2).default('en').describe('Language of generated texts.'),
-    cover_letter_max_words: z.number().int().min(50).max(600).default(180),
+    cover_letter_max_words: z
+      .number()
+      .int()
+      .min(50)
+      .max(600)
+      .default(180)
+      .describe('Upper bound for the cover letter length.'),
     style_rules: keywordList('Free-form writing rules passed to the generator.'),
   })
-  .describe('"Prepare application" drafts. Not implemented yet.');
+  .describe(
+    '"Prepare application" drafts: answers to the posting\'s questions (Greenhouse) and a short cover letter. Drafts count against scoring.daily_budget_usd.',
+  );
 
 /* --------------------------------------------------------------------- root */
 

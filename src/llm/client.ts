@@ -12,6 +12,8 @@ export interface LlmRequest<T extends z.ZodType> {
   prompt: string;
   schema: T;
   maxTokens?: number;
+  /** Overrides the client's default effort for this call. */
+  effort?: 'low' | 'medium' | 'high';
 }
 
 export interface LlmResult<T> {
@@ -53,7 +55,10 @@ export class AnthropicLlm implements LlmClient {
       betas: ['server-side-fallback-2026-07-01'],
       // On a policy decline the API retries on Anthropic's recommended model for that category.
       fallbacks: 'default',
-      output_config: { effort: this.options.effort, format: betaZodOutputFormat(request.schema) },
+      output_config: {
+        effort: request.effort ?? this.options.effort,
+        format: betaZodOutputFormat(request.schema),
+      },
       system: [
         { type: 'text', text: request.instructions },
         { type: 'text', text: request.context, cache_control: { type: 'ephemeral' } },

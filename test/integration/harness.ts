@@ -144,6 +144,8 @@ export interface Harness {
   press(messageId: number, data: string, chatId?: number): Promise<void>;
   say(text: string, chatId?: number): Promise<void>;
   sent(method?: string): ApiCall[];
+  /** Waits for background work started by the bot (application drafts). */
+  settle(): Promise<void>;
   lastText(): string;
   close(): Promise<void>;
 }
@@ -153,7 +155,7 @@ export const CHAT = 1001;
 export interface HarnessOptions {
   /** Answers requests to api.notion.com; enables the Notion tracker. */
   notionFetch?: typeof fetch;
-  /** Fake LLM; creates a scorer when config.scoring.enabled. */
+  /** Fake LLM; creates a scorer when config.scoring.enabled, and a drafter when application.enabled. */
   llm?: LlmClient;
 }
 
@@ -175,7 +177,17 @@ export async function createHarness(
     maxRetries: 0,
     minHostIntervalMs: 0,
   });
+  const tasks: Promise<void>[] = [];
   const bot = createBot({
+    background: (task) => tasks.push(task),
+    drafter:
+      options.llm && config.application.enabled
+        ? {
+            llm: options.llm,
+            pricing: { input: 4, output: 20, cacheRead: 0.2 },
+            profile: 'Senior frontend engineer. React and TypeScript. Based in the Netherlands.',
+          }
+        : undefined,
     token: 'test-token',
     db,
     config,
@@ -196,6 +208,7 @@ export async function createHarness(
     logger: silentLogger,
     now,
     sleep: noSleep,
+    prepare: Boolean(options.llm && config.application.enabled),
   });
   const scheduler = new Scheduler(
     buildSources(config).sources,
@@ -234,6 +247,9 @@ export async function createHarness(
     press: (messageId, data, chatId = CHAT) =>
       bot.handleUpdate(buttonUpdate(chatId, messageId, data)),
     say: (text, chatId = CHAT) => bot.handleUpdate(messageUpdate(chatId, text)),
+    settle: async () => {
+      while (tasks.length > 0) await tasks.shift();
+    },
     sent: (method = 'sendMessage') => calls.filter((call) => call.method === method),
     lastText: () => {
       const text = calls.filter((call) => 'text' in call.payload).at(-1)?.payload.text;
