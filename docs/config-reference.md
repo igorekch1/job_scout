@@ -59,27 +59,30 @@ Where jobs come from. Every source is optional and off by default.
 | `sources.ashby.enabled` | boolean | `false` | Turn this source on or off. |
 | `sources.ashby.interval_minutes` | integer |  | Polling interval for this source. Falls back to schedule.default_interval_minutes. |
 | `sources.ashby.boards` | list of string | `[]` | Ashby job board names to watch (the part after jobs.ashbyhq.com/). |
-| `sources.lever` | object |  | Lever public postings API. Not implemented yet. |
+| `sources.lever` | object |  | Lever public postings API. |
 | `sources.lever.enabled` | boolean | `false` | Turn this source on or off. |
 | `sources.lever.interval_minutes` | integer |  | Polling interval for this source. Falls back to schedule.default_interval_minutes. |
-| `sources.lever.companies` | list of string | `[]` | Lever company slugs to watch. |
-| `sources.himalayas` | object |  | Himalayas public remote-jobs API. Not implemented yet. |
+| `sources.lever.companies` | list of string | `[]` | Lever site names to watch (the part after jobs.lever.co/). |
+| `sources.lever.eu_companies` | list of string | `[]` | Site names hosted on Lever's EU instance (jobs.eu.lever.co). |
+| `sources.himalayas` | object |  | Himalayas public remote-jobs API. Polled at most hourly (its responses are cached for an hour). Cards link to Himalayas as its terms require. |
 | `sources.himalayas.enabled` | boolean | `false` | Turn this source on or off. |
 | `sources.himalayas.interval_minutes` | integer |  | Polling interval for this source. Falls back to schedule.default_interval_minutes. |
-| `sources.himalayas.queries` | list of string | `[]` | Search queries. |
-| `sources.remotive` | object |  | Remotive public remote-jobs API. Not implemented yet. |
+| `sources.himalayas.queries` | list of string | `[]` | Search queries, one request each, newest first. Empty reads the latest jobs feed. |
+| `sources.remotive` | object |  | Remotive public API. Polled at most every 6 hours (Remotive asks for at most 4 requests a day); its jobs appear with a 24-hour delay. Cards link to Remotive as its terms require. |
 | `sources.remotive.enabled` | boolean | `false` | Turn this source on or off. |
 | `sources.remotive.interval_minutes` | integer |  | Polling interval for this source. Falls back to schedule.default_interval_minutes. |
-| `sources.remotive.category` | string |  | Remotive category slug. |
-| `sources.remotive.search` | list of string | `[]` | Search terms. |
-| `sources.remoteok` | object |  | RemoteOK public remote-jobs API. Not implemented yet. |
+| `sources.remotive.category` | string |  | Remotive category slug, e.g. "software-dev". |
+| `sources.remotive.search` | list of string | `[]` | Keep only jobs whose title, tags or description mention one of these. Applied locally, so each run costs one request. Empty keeps all. |
+| `sources.remoteok` | object |  | RemoteOK public API. Polled at most hourly. Cards link to Remote OK as its terms require. |
 | `sources.remoteok.enabled` | boolean | `false` | Turn this source on or off. |
 | `sources.remoteok.interval_minutes` | integer |  | Polling interval for this source. Falls back to schedule.default_interval_minutes. |
-| `sources.remoteok.tags` | list of string | `[]` | Tags to query. |
-| `sources.jobicy` | object |  | Jobicy public remote-jobs API. Not implemented yet. |
+| `sources.remoteok.tags` | list of string | `[]` | RemoteOK tags to query, one request each (e.g. react, javascript). Empty reads the latest 100 jobs of every category. |
+| `sources.jobicy` | object |  | Jobicy public API. Polled at most hourly as Jobicy asks; listings appear about 3 hours after publication. Cards link to Jobicy as its terms require. |
 | `sources.jobicy.enabled` | boolean | `false` | Turn this source on or off. |
 | `sources.jobicy.interval_minutes` | integer |  | Polling interval for this source. Falls back to schedule.default_interval_minutes. |
-| `sources.jobicy.tags` | list of string | `[]` | Tags to query. |
+| `sources.jobicy.tags` | list of string | `[]` | Keep only jobs whose title, industry or description mention one of these. Applied locally, so each run costs one request. Empty keeps all. |
+| `sources.jobicy.geo` | string |  | Jobicy region slug, e.g. "europe" or "anywhere". |
+| `sources.jobicy.industry` | string |  | Jobicy industry slug, e.g. "engineering". |
 | `sources.telegram_channels` | object |  | Reads posts from Telegram channels through YOUR OWN account (TG_API_ID, TG_API_HASH, TG_SESSION). Disabled by default. Not implemented yet. |
 | `sources.telegram_channels.enabled` | boolean | `false` | Turn this source on or off. |
 | `sources.telegram_channels.interval_minutes` | integer |  | Polling interval for this source. Falls back to schedule.default_interval_minutes. |
