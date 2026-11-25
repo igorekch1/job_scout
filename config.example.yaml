@@ -23,7 +23,8 @@ sources:
     feeds:
       - id: example-board-frontend
         url: 'https://jobs.example.com/feeds/frontend.rss'
-        title_pattern: '^(?<title>.+) at (?<company>.+)$' # optional, named groups
+        # optional; named groups: title, company, location, salary
+        title_pattern: '^(?<title>.+) at (?<company>.+)$'
         defaults: { remote: true } # optional hints the feed does not carry
   greenhouse:
     enabled: true
@@ -74,6 +75,7 @@ filters:
       countries: []
       signals: [] # keywords/domains anywhere in the posting
     keep_if_unstated: true
+    remote_keywords: [] # words meaning "remote" in other languages
   pay:
     currency: USD # floors below are in this currency
     full_time_min_monthly: 3000

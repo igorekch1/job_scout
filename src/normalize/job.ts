@@ -34,6 +34,8 @@ export interface RawJob {
   descriptionText?: string | null;
   locationText?: string | null;
   workMode?: WorkMode | null;
+  /** Work mode to assume when neither the source nor the text states one. */
+  workModeFallback?: WorkMode | null;
   /** Structured salary, when the source provides one. */
   salary?: Salary | null;
   /** Free-text salary, when the source has a dedicated field for it. */

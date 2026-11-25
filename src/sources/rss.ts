@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { RssFeedConfig } from '../config/schema.js';
 import type { RawJob } from '../normalize/job.js';
+import { canonicalUrl } from '../dedup/canonical-url.js';
 import { collapseWhitespace } from '../util/text.js';
 import { parseDate, type FetchContext, type Source } from './types.js';
 
@@ -76,21 +77,28 @@ export function mapFeedItem(item: Node, feed: RssFeedConfig): RawJob | null {
   const author = item.author;
   company ??= isNode(author) ? first(author, 'name') : text(author);
 
+  let location = first(item, 'location', 'job:location', 'job_listing:location', 'region');
+  let salaryText = first(item, 'salary', 'job:salary', 'job_listing:salary');
+
   if (feed.title_pattern) {
     const groups = new RegExp(feed.title_pattern, 'iu').exec(title)?.groups;
     if (groups?.company?.trim()) company = groups.company.trim();
+    if (groups?.location?.trim()) location = groups.location.trim();
+    if (groups?.salary?.trim()) salaryText = groups.salary.trim();
     if (groups?.title?.trim()) title = groups.title.trim();
   }
 
   return {
-    externalId: first(item, 'guid', 'id') ?? url,
+    // Feeds disagree on what a guid is (some change it on every edit); the link is stable.
+    externalId: canonicalUrl(url),
     url,
     title,
     company: company ?? feed.defaults.company ?? null,
     descriptionHtml: first(item, 'content:encoded', 'content', 'description', 'summary'),
-    locationText: first(item, 'location', 'job:location', 'job_listing:location', 'region'),
+    locationText: location,
     workMode: feed.defaults.remote === true ? 'remote' : null,
-    salaryText: first(item, 'salary', 'job:salary', 'job_listing:salary'),
+    workModeFallback: feed.defaults.remote === false ? 'onsite' : null,
+    salaryText,
     employmentType: feed.defaults.employment_type ?? null,
     postedAt: parseDate(first(item, 'pubDate', 'published', 'updated', 'dc:date')),
     raw: item,

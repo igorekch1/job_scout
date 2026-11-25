@@ -141,7 +141,7 @@ describe('rss', () => {
     );
     expect(jobs).toHaveLength(2);
     expect(jobs[0]).toMatchObject({
-      externalId: 'example-1001',
+      externalId: 'https://jobs.example.com/jobs/1001',
       url: 'https://jobs.example.com/jobs/1001?utm_source=rss&utm_medium=feed',
       title: 'Senior Frontend Engineer',
       company: 'Acme Robotics',
@@ -170,13 +170,57 @@ describe('rss', () => {
     const jobs = parseFeed(fixture('feed.atom.xml'), feedConfig());
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toMatchObject({
-      externalId: 'urn:example:job:77',
+      externalId: 'https://careers.example.org/jobs/77',
       url: 'https://careers.example.org/jobs/77',
       title: 'Lead Full Stack Engineer',
       company: 'Northwind Labs',
     });
     const job = normalizeJob(jobs[0]!, { id: 'rss:example', type: 'rss' });
     expect(job.description).toBe('Hybrid role in Berlin, Germany.');
+  });
+
+  it('reads location and salary from the title when the pattern names them', () => {
+    const feed = feedConfig({
+      title_pattern:
+        '^(?<title>.+?) @ (?<company>[^,]+)(?:, (?<location>[^$]+?))?(?:, (?<salary>\\$.+))?$',
+    });
+    const xml = `<rss><channel>
+      <item><title>Senior React Engineer @ Globex, Lisbon, op afstand, $4000–6000</title><link>https://jobs.example.com/1</link></item>
+      <item><title>Lead Engineer @ Northwind Labs</title><link>https://jobs.example.com/2</link></item>
+    </channel></rss>`;
+    const [first, second] = parseFeed(xml, feed);
+    expect(first).toMatchObject({
+      title: 'Senior React Engineer',
+      company: 'Globex',
+      locationText: 'Lisbon, op afstand',
+      salaryText: '$4000–6000',
+    });
+    expect(second).toMatchObject({
+      title: 'Lead Engineer',
+      company: 'Northwind Labs',
+      locationText: null,
+    });
+
+    const job = normalizeJob(
+      first!,
+      { id: 'rss:example', type: 'rss' },
+      { remoteKeywords: ['op afstand'] },
+    );
+    expect(job.location.workMode).toBe('remote');
+    expect(job.salary).toMatchObject({ min: 4000, max: 6000, currency: 'USD', period: 'month' });
+    expect(normalizeJob(first!, { id: 'rss:example', type: 'rss' }).location.workMode).toBeNull();
+  });
+
+  it('treats items as on-site when the feed default says so and the text does not say remote', () => {
+    const feed = feedConfig({ defaults: { remote: false } });
+    const xml = `<rss><channel>
+      <item><title>Engineer</title><link>https://jobs.example.com/1</link><description>Join our office.</description></item>
+      <item><title>Engineer (Remote)</title><link>https://jobs.example.com/2</link></item>
+    </channel></rss>`;
+    const modes = parseFeed(xml, feed).map(
+      (raw) => normalizeJob(raw, { id: 'rss:example', type: 'rss' }).location.workMode,
+    );
+    expect(modes).toEqual(['onsite', 'remote']);
   });
 
   it('uses feed defaults and rejects non-feed documents', async () => {

@@ -119,12 +119,17 @@ const rssFeedSchema = z.strictObject({
     .refine(isValidRegex, 'invalid regular expression')
     .optional()
     .describe(
-      'Optional regex with named groups "title" and/or "company" for feeds that pack both into the item title, e.g. "^(?<title>.+) at (?<company>.+)$".',
+      'Optional regex applied to the item title, for feeds that pack several fields into it. Named groups "title", "company", "location" and "salary" are used when present, e.g. "^(?<title>.+) at (?<company>.+)$".',
     ),
   defaults: z
     .strictObject({
       company: z.string().trim().min(1).optional().describe('Company name when the feed has none.'),
-      remote: z.boolean().optional().describe('Treat every item as remote (or not).'),
+      remote: z
+        .boolean()
+        .optional()
+        .describe(
+          'true: every item is remote. false: an item is on-site unless its text says remote. Omit when the feed mixes both without saying.',
+        ),
       employment_type: z
         .enum(['full_time', 'part_time', 'contract'])
         .optional()
@@ -335,6 +340,9 @@ const filtersSchema = z
           .boolean()
           .default(true)
           .describe('Keep postings with no usable location information (marked on the card).'),
+        remote_keywords: keywordList(
+          'Extra words that mean "remote" in the language of your sources. English wording is built in.',
+        ),
         extra_aliases: z
           .record(z.string(), z.string().trim().min(1))
           .default({})

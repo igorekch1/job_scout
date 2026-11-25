@@ -1,4 +1,4 @@
-import { keywordRegex } from '../util/text.js';
+import { findKeyword, keywordRegex } from '../util/text.js';
 import { buildAliases, type PlaceAlias } from './gazetteer.js';
 import type { JobLocation, WorkMode } from './job.js';
 
@@ -54,8 +54,11 @@ const REMOTE =
 const HYBRID = /\bhybrid\b/i;
 const ONSITE = /\b(on[- ]?site|in[- ]office|office[- ]based|in[- ]person)\b/i;
 
-export function detectWorkMode(text: string): WorkMode | null {
-  if (REMOTE.test(text)) return 'remote';
+export function detectWorkMode(
+  text: string,
+  remoteKeywords: readonly string[] = [],
+): WorkMode | null {
+  if (REMOTE.test(text) || findKeyword(text, remoteKeywords)) return 'remote';
   if (HYBRID.test(text)) return 'hybrid';
   if (ONSITE.test(text)) return 'onsite';
   return null;
@@ -65,10 +68,15 @@ export function detectWorkMode(text: string): WorkMode | null {
 export function parseLocation(
   text: string | null | undefined,
   aliases: readonly PlaceAlias[] = DEFAULT_ALIASES,
+  remoteKeywords: readonly string[] = [],
 ): JobLocation {
   const clean = text?.replace(/\s+/g, ' ').trim() ?? '';
   if (!clean) return { text: null, workMode: null, countries: [], regions: [] };
-  return { text: clean, workMode: detectWorkMode(clean), ...findPlaces(clean, aliases) };
+  return {
+    text: clean,
+    workMode: detectWorkMode(clean, remoteKeywords),
+    ...findPlaces(clean, aliases),
+  };
 }
 
 const PLACE_RUN = '([^.;\\n()\\[\\]]{2,70})';

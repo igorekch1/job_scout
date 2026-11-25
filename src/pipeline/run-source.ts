@@ -73,7 +73,10 @@ export async function runSource(source: Source, deps: PipelineDeps): Promise<Run
     summary.fetched = rawJobs.length;
 
     for (const raw of rawJobs) {
-      const job = normalizeJob(raw, source, { aliases });
+      const job = normalizeJob(raw, source, {
+        aliases,
+        remoteKeywords: config.filters.location.remote_keywords,
+      });
       const outcome = await ingestJob(db, job, { config, now: now(), firstRun });
       if (outcome.kind === 'merged') summary.merged += 1;
       if (outcome.kind === 'created') {

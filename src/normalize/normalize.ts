@@ -9,6 +9,8 @@ import { parseSalary } from './salary.js';
 export interface NormalizeOptions {
   /** Place aliases; build once with `buildAliases(config.filters.location.extra_aliases)`. */
   aliases?: readonly PlaceAlias[];
+  /** Extra words that mean "remote" (`filters.location.remote_keywords`). */
+  remoteKeywords?: readonly string[];
 }
 
 const STRONG_REMOTE =
@@ -36,11 +38,12 @@ export function normalizeJob(
   options: NormalizeOptions = {},
 ): Job {
   const aliases = options.aliases ?? defaultAliases;
+  const remoteKeywords = options.remoteKeywords ?? [];
   const title = collapseWhitespace(raw.title);
   const description = raw.descriptionText?.trim() || htmlToText(raw.descriptionHtml);
   const company = raw.company ? collapseWhitespace(raw.company) || null : null;
 
-  const location = parseLocation(raw.locationText, aliases);
+  const location = parseLocation(raw.locationText, aliases, remoteKeywords);
   let statedRemote = false;
   if (location.countries.length === 0 && location.regions.length === 0) {
     // the location line names no place: look for an explicit restriction in the text
@@ -51,8 +54,12 @@ export function normalizeJob(
   }
 
   let workMode: WorkMode | null =
-    raw.workMode ?? location.workMode ?? detectWorkMode(title) ?? (statedRemote ? 'remote' : null);
+    raw.workMode ??
+    location.workMode ??
+    detectWorkMode(title, remoteKeywords) ??
+    (statedRemote ? 'remote' : null);
   if (!workMode && STRONG_REMOTE.test(description)) workMode = 'remote';
+  workMode ??= raw.workModeFallback ?? null;
   location.workMode = workMode;
 
   const salary =

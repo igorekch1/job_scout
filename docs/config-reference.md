@@ -46,10 +46,10 @@ Where jobs come from. Every source is optional and off by default.
 | `sources.rss.feeds` | list of object | `[]` | Feeds to poll. |
 | `sources.rss.feeds[].id` | string |  | **Required.** Unique name for this feed, shown in /status and on cards. |
 | `sources.rss.feeds[].url` | string |  | **Required.** RSS or Atom feed URL. |
-| `sources.rss.feeds[].title_pattern` | string |  | Optional regex with named groups "title" and/or "company" for feeds that pack both into the item title, e.g. "^(?<title>.+) at (?<company>.+)$". |
+| `sources.rss.feeds[].title_pattern` | string |  | Optional regex applied to the item title, for feeds that pack several fields into it. Named groups "title", "company", "location" and "salary" are used when present, e.g. "^(?<title>.+) at (?<company>.+)$". |
 | `sources.rss.feeds[].defaults` | object |  | Values assumed for every item of the feed when the feed does not carry them. |
 | `sources.rss.feeds[].defaults.company` | string |  | Company name when the feed has none. |
-| `sources.rss.feeds[].defaults.remote` | boolean |  | Treat every item as remote (or not). |
+| `sources.rss.feeds[].defaults.remote` | boolean |  | true: every item is remote. false: an item is on-site unless its text says remote. Omit when the feed mixes both without saying. |
 | `sources.rss.feeds[].defaults.employment_type` | `full_time` \| `part_time` \| `contract` |  | Employment type when the feed does not state it. |
 | `sources.greenhouse` | object |  | Greenhouse public job board API. |
 | `sources.greenhouse.enabled` | boolean | `false` | Turn this source on or off. |
@@ -128,6 +128,7 @@ Rule filter. Every rule is optional; every drop records a reason code.
 | `filters.location.always_blocked.countries` | list of string |  | Drop any posting that names one of these countries as a location. |
 | `filters.location.always_blocked.signals` | list of string | `[]` | Drop any posting whose title, company, description or URL contains one of these keywords or domains. |
 | `filters.location.keep_if_unstated` | boolean | `true` | Keep postings with no usable location information (marked on the card). |
+| `filters.location.remote_keywords` | list of string | `[]` | Extra words that mean "remote" in the language of your sources. English wording is built in. |
 | `filters.location.extra_aliases` | map of string to string | `{}` | Extra place names mapped to an ISO country code or a region id, e.g. { "benelux": "europe" }. |
 | `filters.pay` | object |  | Pay floors. A posting is dropped only when the top of its stated range is below the floor. |
 | `filters.pay.currency` | string |  | Currency of the floors below. |
