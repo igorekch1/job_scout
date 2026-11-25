@@ -126,7 +126,7 @@ describe('collect, filter and deliver', () => {
     expect(card.payload.text).toContain('Remote - Europe');
     expect(card.payload.text).toContain('posted 1 Mar');
     expect(card.payload.text).toContain(
-      '>greenhouse</a> · <a href="https://jobs.example.com/jobs/1001',
+      '>Greenhouse</a> · <a href="https://jobs.example.com/jobs/1001',
     );
     expect(JSON.stringify(card.payload.reply_markup)).toContain('Add to tracker');
 
